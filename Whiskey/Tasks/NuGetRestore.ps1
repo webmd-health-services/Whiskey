@@ -2,7 +2,7 @@
 function Restore-WhiskeyNuGetPackage
 {
     [CmdletBinding()]
-    [Whiskey.TaskAttribute('NuGetRestore', Platform='Windows')]
+    [Whiskey.Task('NuGetRestore', Platform='Windows')]
     [Whiskey.RequiresNuGetPackage('NuGet.CommandLine', Version='6.10.*', PathParameterName='NuGetPath')]
     param(
         [Parameter(Mandatory)]

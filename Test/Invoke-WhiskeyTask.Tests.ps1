@@ -361,7 +361,7 @@ BeforeAll {
         )
 
         $threwException | Should -BeTrue
-        $Global:Error | Where-Object { $_ -match $Pattern } | Should -Not -BeNullOrEmpty
+        $Global:Error | Should -Match $Pattern
     }
 
     function ThenToolInstalled
@@ -459,7 +459,7 @@ BeforeAll {
 
         if( $InRunMode )
         {
-            $script:context.RunMode = $InRunMode;
+            $script:context.RunMode = $InRunMode
         }
 
         if( $script:scmBranch )
@@ -497,6 +497,9 @@ BeforeAll {
                                                 -Parameter $Parameter `
                                                 4>&1 `
                                                 5>&1
+            Write-Verbose '# BEGIN TASK OUTPUT' #-Verbose
+            $script:output | Write-Verbose #-Verbose
+            Write-Verbose '# END   TASK OUTPUT' #-Verbose
         }
         catch
         {
@@ -575,16 +578,16 @@ Describe 'Invoke-WhiskeyTask' {
 
     It 'should run OnlyBy Developer task' {
         GivenRunByBuildServer
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyBy' = 'Developer' }
+        WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'Path' = 'somefile.ps1'; '.OnlyBy' = 'Developer' }
         ThenPipelineSucceeded
         ThenTaskNotRun 'NoOpTask'
     }
 
     It 'should not run OnlyBy Developer task' {
         GivenRunByDeveloper
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyBy' = 'Developer' }
+        WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'Path' = 'somefile.ps1'; '.OnlyBy' = 'Developer' }
         ThenPipelineSucceeded
-        ThenTaskRan 'NoOpTask' -WithParameter @{ 'Path' = 'somefile.ps1' } -WithoutParameter 'OnlyBy'
+        ThenTaskRan 'NoOpTask' -WithParameter @{ 'Path' = 'somefile.ps1' } -WithoutParameter '.OnlyBy'
     }
 
     It 'should replace variables with values' {
@@ -597,19 +600,19 @@ Describe 'Invoke-WhiskeyTask' {
 
     It 'should run OnlyBy BuildServer task ' {
         GivenRunByBuildServer
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyBy' = 'BuildServer' }
+        WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'Path' = 'somefile.ps1'; '.OnlyBy' = 'BuildServer' }
         ThenPipelineSucceeded
-        ThenTaskRan 'NoOpTask' -WithParameter @{ 'Path' = 'somefile.ps1' } -WithoutParameter 'OnlyBy'
+        ThenTaskRan 'NoOpTask' -WithParameter @{ 'Path' = 'somefile.ps1' } -WithoutParameter '.OnlyBy'
     }
 
     It 'should not run OnlyBy BuildServer task' {
         GivenRunByDeveloper
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'OnlyBy' = 'BuildServer' }
+        WhenRunningMockedTask 'NoOpTask' -Parameter @{ '.OnlyBy' = 'BuildServer' }
         ThenPipelineSucceeded
         ThenTaskNotRun 'NoOpTask'
     }
 
-    It 'should validate <_> value' -ForEach @('OnlyBy', 'ExceptBy') {
+    It 'should validate <_> value' -ForEach @('.OnlyBy', '.ExceptBy') {
         GivenRunByDeveloper
         WhenRunningMockedTask 'NoOpTask' -Parameter @{ $_ = 'Somebody' } -ErrorAction SilentlyContinue
         ThenThrewException 'invalid value'
@@ -618,14 +621,14 @@ Describe 'Invoke-WhiskeyTask' {
 
     It 'should not run ExceptBy BuildServer task' {
         GivenRunByBuildServer
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'ExceptBy' = 'BuildServer' }
+        WhenRunningMockedTask 'NoOpTask' -Parameter @{ '.ExceptBy' = 'BuildServer' }
         ThenPipelineSucceeded
         ThenTaskNotRun 'NoOpTask'
     }
 
     It 'should run ExceptBy BuildServer  task' {
         GivenRunByDeveloper
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'Path' = 'somefile.ps1'; 'ExceptBy' = 'BuildServer' }
+        WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'Path' = 'somefile.ps1'; '.ExceptBy' = 'BuildServer' }
         ThenPipelineSucceeded
         ThenTaskRan 'NoOpTask' -WithParameter @{ 'Path' = 'somefile.ps1' }
     }
@@ -633,58 +636,72 @@ Describe 'Invoke-WhiskeyTask' {
     It 'should not allow both OnlyBy an ExceptBy properties' {
         GivenRunByDeveloper
         GivenScmBranch 'develop'
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'OnlyBy' = 'Developer'; 'ExceptBy' = 'Developer' } -ErrorAction SilentlyContinue
-        ThenThrewException 'This\ task\ defines\ both\ "OnlyBy"\ and\ "ExceptBy"\ properties'
+        WhenRunningMockedTask 'NoOpTask' `
+                              -Parameter @{ '.OnlyBy' = 'Developer'; '.ExceptBy' = 'Developer' } `
+                              -ErrorAction SilentlyContinue
+        ThenThrewException ([regex]::Escape('".ExceptBy" and ".OnlyBy"'))
         ThenTaskNotRun 'NoOpTask'
     }
 
     It 'should run OnlyOnBranch task' {
         GivenRunByDeveloper
         GivenScmBranch 'develop'
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyOnBranch' = 'develop' } -ErrorAction SilentlyContinue
-        ThenTaskRan 'NoOpTask' -WithParameter @{ 'Path' = 'somefile.ps1' } -WithoutParameter 'OnlyOnBranch'
+        WhenRunningMockedTask 'NoOpTask' `
+                              -Parameter @{ 'Path' = 'somefile.ps1'; '.OnlyOnBranch' = 'develop' } `
+                              -ErrorAction SilentlyContinue
+        ThenTaskRan 'NoOpTask' -WithParameter @{ 'Path' = 'somefile.ps1' } -WithoutParameter '.OnlyOnBranch'
     }
 
     It 'should run OnlyOnBranch * task' {
         GivenRunByDeveloper
         GivenScmBranch 'develop'
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'Path' = 'somefile.ps1'; 'OnlyOnBranch' = @( 'master', 'dev*' ) } -ErrorAction SilentlyContinue
-        ThenTaskRan 'NoOpTask' -WithParameter @{ 'Path' = 'somefile.ps1' } -WithoutParameter 'OnlyOnBranch'
+        WhenRunningMockedTask 'NoOpTask' `
+                              -Parameter @{ 'Path' = 'somefile.ps1'; '.OnlyOnBranch' = @( 'master', 'dev*' ) } `
+                              -ErrorAction SilentlyContinue
+        ThenTaskRan 'NoOpTask' -WithParameter @{ 'Path' = 'somefile.ps1' } -WithoutParameter '.OnlyOnBranch'
     }
 
     It 'should not run OnlyOnBranch task' {
         GivenRunByDeveloper
         GivenScmBranch 'develop'
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'OnlyOnBranch' = 'notDevelop' } -ErrorAction SilentlyContinue
+        WhenRunningMockedTask 'NoOpTask' -Parameter @{ '.OnlyOnBranch' = 'notDevelop' } -ErrorAction SilentlyContinue
         ThenTaskNotRun 'NoOpTask'
     }
 
     It 'should not run ExceptOnBranch task' {
         GivenRunByDeveloper
         GivenScmBranch 'develop'
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'Path' = 'somefile.ps1'; 'ExceptOnBranch' = 'develop' } -ErrorAction SilentlyContinue
+        WhenRunningMockedTask 'NoOpTask' `
+                              -Parameter @{ 'Path' = 'somefile.ps1'; '.ExceptOnBranch' = 'develop' } `
+                              -ErrorAction SilentlyContinue
         ThenTaskNotRun 'NoOpTask'
     }
 
     It 'should not run ExceptOnBranch * task' {
         GivenRunByDeveloper
         GivenScmBranch 'develop'
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'ExceptOnBranch' = @( 'master', 'dev*' ) } -ErrorAction SilentlyContinue
+        WhenRunningMockedTask 'NoOpTask' `
+                              -Parameter @{ '.ExceptOnBranch' = @( 'master', 'dev*' ) } `
+                              -ErrorAction SilentlyContinue
         ThenTaskNotRun 'NoOpTask'
     }
 
     It 'should run ExceptOnBranch task' {
         GivenRunByDeveloper
         GivenScmBranch 'develop'
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'Path' = 'somefile.ps1'; 'ExceptOnBranch' = 'notDevelop' }
-        ThenTaskRan 'NoOpTask' -WithParameter @{ 'Path' = 'somefile.ps1' } -WithoutParameter 'ExceptOnBranch'
+        WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'Path' = 'somefile.ps1'; '.ExceptOnBranch' = 'notDevelop' }
+        ThenTaskRan 'NoOpTask' `
+                    -WithParameter @{ 'Path' = 'somefile.ps1' } `
+                    -WithoutParameter 'ExceptOnBranch','.ExceptOnBranch'
     }
 
-    It 'should not allow OnlyOnBranch and ExceptOnBranch properties' {
+    It 'prohibits OnlyOnBranch and ExceptOnBranch properties' {
         GivenRunByDeveloper
         GivenScmBranch 'develop'
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'OnlyOnBranch' = 'develop'; 'ExceptOnBranch' = 'develop' } -ErrorAction SilentlyContinue
-        ThenThrewException 'This task defines both OnlyOnBranch and ExceptOnBranch properties'
+        WhenRunningMockedTask 'NoOpTask' `
+                              -Parameter @{ '.OnlyOnBranch' = 'develop'; '.ExceptOnBranch' = 'develop' } `
+                              -ErrorAction SilentlyContinue
+        ThenThrewException ([regex]::Escape('".ExceptOnBranch" and ".OnlyOnBranch"'))
         ThenTaskNotRun 'NoOpTask'
     }
 
@@ -692,11 +709,11 @@ Describe 'Invoke-WhiskeyTask' {
         GivenRunByDeveloper
         GivenWorkingDirectory '.output'
         WhenRunningMockedTask -Named 'NoOpTask' `
-                              -Parameter @{ 'Path' = 'somefile.ps1'; 'WorkingDirectory' = '.output' } `
+                              -Parameter @{ 'Path' = 'somefile.ps1'; '.WorkingDirectory' = '.output' } `
                               -ThatMarksWorkingDirectory
         ThenTaskRan -Named 'NoOpTask' `
                     -WithParameter @{ 'Path' = 'somefile.ps1' } `
-                    -WithoutParameter 'WorkingDirectory' `
+                    -WithoutParameter '.WorkingDirectory' `
                     -InWorkingDirectory '.output'
     }
 
@@ -714,7 +731,7 @@ Describe 'Invoke-WhiskeyTask' {
                     throw 'tool installation didn''t happen in the build root'
                 }
             }
-        $parameter = @{ 'WorkingDirectory' = '.output' }
+        $parameter = @{ '.WorkingDirectory' = '.output' }
         WhenRunningTask 'RequiresNodeTask' -Parameter $parameter
         ThenToolInstalled 'Node'
         ThenPipelineSucceeded
@@ -736,14 +753,16 @@ Describe 'Invoke-WhiskeyTask' {
                     throw 'tool uninstallation didn''t happen in the task''s working directory'
                 }
             }
-        WhenRunningTask 'RequiresNodeTask' -Parameter @{ 'WorkingDirectory' = '.output' } -InRunMode 'Clean'
+        WhenRunningTask 'RequiresNodeTask' -Parameter @{ '.WorkingDirectory' = '.output' } -InRunMode 'Clean'
         ThenPipelineSucceeded
         ThenToolUninstalled 'Node'
     }
 
     It 'should validate working directory exists' {
         GivenRunByDeveloper
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'WorkingDirectory' = 'Invalid/Directory' } -ErrorAction SilentlyContinue
+        WhenRunningMockedTask 'NoOpTask' `
+                              -Parameter @{ '.WorkingDirectory' = 'Invalid/Directory' } `
+                              -ErrorAction SilentlyContinue
         ThenThrewException '\bInvalid(\\|/)Directory\b.+does not exist'
         ThenTaskNotRun 'NoOpTask'
     }
@@ -767,36 +786,36 @@ Describe 'Invoke-WhiskeyTask' {
     }
 
     It 'should not run <_> task' -ForEach @('Clean', 'Initialize', 'Build') {
-        $TaskParameter = @{ 'ExceptDuring' = $_ }
+        $TaskParameter = @{ '.ExceptDuring' = $_ }
         WhenRunningMockedTask 'SupportsCleanAndInitializeTask' -Parameter $TaskParameter
         WhenRunningTask 'SupportsCleanAndInitializeTask' -Parameter $TaskParameter -InRunMode 'Clean'
         WhenRunningTask 'SupportsCleanAndInitializeTask' -Parameter $TaskParameter -InRunMode 'Initialize'
-        ThenTaskRan 'SupportsCleanAndInitializeTask' -Times 2 -WithoutParameter 'ExceptDuring'
+        ThenTaskRan 'SupportsCleanAndInitializeTask' -Times 2 -WithoutParameter 'ExceptDuring', '.ExceptDuring'
     }
 
     AfterEach { Remove-Item -Path 'env:fubar' }
     It 'should run IfExists env: task' {
         GivenEnvironmentVariable 'fubar'
-        $TaskParameter = @{ 'IfExists' = 'env:fubar' }
+        $TaskParameter = @{ '.IfExists' = 'env:fubar' }
         WhenRunningMockedTask 'NoOpTask' -Parameter $TaskParameter
         ThenTaskRan 'NoOpTask'
     }
 
     It 'should not run IfExists env: task' {
-        $TaskParameter = @{ 'IfExists' = 'env:snafu' }
+        $TaskParameter = @{ '.IfExists' = 'env:snafu' }
         WhenRunningMockedTask 'NoOpTask' -Parameter $TaskParameter
         ThenTaskNotRun 'NoOpTask'
     }
 
     It 'should run IfExists file task' {
         GivenFile 'fubar'
-        $TaskParameter = @{ 'IfExists' = 'fubar' }
+        $TaskParameter = @{ '.IfExists' = 'fubar' }
         WhenRunningMockedTask 'NoOpTask' -Parameter $TaskParameter
         ThenTaskRan 'NoOpTask'
     }
 
     It 'should not run IfExists file task' {
-        $TaskParameter = @{ 'IfExists' = 'fubar' }
+        $TaskParameter = @{ '.IfExists' = 'fubar' }
         WhenRunningMockedTask 'NoOpTask' -Parameter $TaskParameter
         ThenTaskNotRun 'NoOpTask'
     }
@@ -804,66 +823,72 @@ Describe 'Invoke-WhiskeyTask' {
     AfterEach { Remove-Item -Path 'env:fubar' }
     It 'should not run UnlessExists env: task' {
         GivenEnvironmentVariable 'fubar'
-        $TaskParameter = @{ 'UnlessExists' = 'env:fubar' }
+        $TaskParameter = @{ '.UnlessExists' = 'env:fubar' }
         WhenRunningMockedTask 'NoOpTask' -Parameter $TaskParameter
         ThenTaskNotRun 'NoOpTask'
     }
 
     It 'should run UnlessExists env: task' {
-        $TaskParameter = @{ 'UnlessExists' = 'env:snafu' }
+        $TaskParameter = @{ '.UnlessExists' = 'env:snafu' }
         WhenRunningMockedTask 'NoOpTask' -Parameter $TaskParameter
         ThenTaskRan 'NoOpTask'
     }
 
     It 'should not run UnlessExists file task' {
         GivenFile 'fubar'
-        $TaskParameter = @{ 'UnlessExists' = 'fubar' }
+        $TaskParameter = @{ '.UnlessExists' = 'fubar' }
         WhenRunningMockedTask 'NoOpTask' -Parameter $TaskParameter
         ThenTaskNotRun 'NoOpTask'
     }
 
     It 'should run UnlessExists file task' {
-        $TaskParameter = @{ 'UnlessExists' = 'fubar' }
+        $TaskParameter = @{ '.UnlessExists' = 'fubar' }
         WhenRunningMockedTask 'NoOpTask' -Parameter $TaskParameter
         ThenTaskRan 'NoOpTask'
     }
 
-    It 'should prohibit both OnlyDuring and ExceptDuring task' {
-        WhenRunningMockedTask 'SupportsCleanAndInitializeTask' -Parameter @{ 'OnlyDuring' = 'Clean'; 'ExceptDuring' = 'Clean' } -ErrorAction SilentlyContinue
-        ThenThrewException 'Both ''OnlyDuring'' and ''ExceptDuring'' properties are used. These properties are mutually exclusive'
+    It 'prohibits both OnlyDuring and ExceptDuring properties' {
+        WhenRunningMockedTask 'SupportsCleanAndInitializeTask' `
+                              -Parameter @{ '.OnlyDuring' = 'Clean'; '.ExceptDuring' = 'Clean' } `
+                              -ErrorAction SilentlyContinue
+        ThenThrewException ([regex]::Escape('".ExceptDuring" and ".OnlyDuring"'))
         ThenTaskNotRun 'SupportsCleanAndInitializeTask'
     }
 
     It 'should validate OnlyDuring' {
-        WhenRunningMockedTask 'SupportsCleanAndInitializeTask' -Parameter @{ 'OnlyDuring' = 'InvalidValue' } -ErrorAction SilentlyContinue
-        ThenThrewException 'Property ''OnlyDuring'' has an invalid value'
+        WhenRunningMockedTask 'SupportsCleanAndInitializeTask' `
+                              -Parameter @{ '.OnlyDuring' = 'InvalidValue' } `
+                              -ErrorAction SilentlyContinue
+        ThenThrewException 'OnlyDuring.*invalid value'
         ThenTaskNotRun 'SupportsCleanAndInitializeTask'
     }
 
     It 'should validate ExceptDuring' {
-        WhenRunningMockedTask 'SupportsCleanAndInitializeTask' -Parameter @{ 'ExceptDuring' = 'InvalidValue' } -ErrorAction SilentlyContinue
-        ThenThrewException 'Property ''ExceptDuring'' has an invalid value'
+        WhenRunningMockedTask 'SupportsCleanAndInitializeTask' `
+                              -Parameter @{ '.ExceptDuring' = 'InvalidValue' } `
+                              -ErrorAction SilentlyContinue
+        ThenThrewException 'ExceptDuring.*invalid value'
         ThenTaskNotRun 'SupportsCleanAndInitializeTask'
     }
 
-    It 'should allow variable for <_> value' -ForEach @('OnlyBy', 'ExceptBy', 'OnlyDuring', 'ExceptDuring') {
+    It 'should allow variable for <_> value' -ForEach @('.OnlyBy', '.ExceptBy', '.OnlyDuring', '.ExceptDuring') {
         GivenVariable 'Fubar' 'Snafu'
         WhenRunningMockedTask 'NoOpTask' -Parameter @{ $_ = '$(Fubar)' } -ErrorAction SilentlyContinue
-        ThenThrewException 'invalid\ value:\ ''Snafu'''
+        ThenThrewException 'invalid\ value\ "Snafu"'
         ThenTaskNotRun 'NoOpTask'
     }
 
     It 'should allow variable for OnlyOnBranch property' {
         GivenVariable 'Fubar' 'Snafu'
         GivenScmBranch 'Snafu'
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'OnlyOnBranch' = '$(Fubar)' }
+        WhenRunningMockedTask 'NoOpTask' -Parameter @{ '.OnlyOnBranch' = '$(Fubar)' }
         ThenTaskRan 'NoOpTask'
     }
 
     It 'should allow variable for ExceptOnBranch property' {
         GivenVariable 'Fubar' 'Snafu'
         GivenScmBranch 'Snafu'
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'ExceptOnBranch' = '$(Fubar)' }
+        WhenRunningMockedTask 'NoOpTask' -Parameter @{ '.ExceptOnBranch' = '$(Fubar)' }
         ThenTaskNotRun 'NoOpTask'
     }
 
@@ -871,27 +896,27 @@ Describe 'Invoke-WhiskeyTask' {
         GivenWorkingDirectory 'Snafu'
         GivenVariable 'Fubar' 'Snafu'
         WhenRunningMockedTask -Named 'NoOpTask' `
-                              -Parameter @{ 'WorkingDirectory' = '$(Fubar)' } `
+                              -Parameter @{ '.WorkingDirectory' = '$(Fubar)' } `
                               -ThatMarksWorkingDirectory
         ThenTaskRan 'NoOpTask' -InWorkingDirectory 'Snafu'
     }
 
-    It 'should use defaults value for <_> property' -ForEach @('OnlyBy', 'ExceptBy', 'OnlyDuring', 'ExceptDuring') {
+    It 'should use defaults value for <_> property' -ForEach @('.OnlyBy', '.ExceptBy', '.OnlyDuring', '.ExceptDuring') {
         GivenDefaults @{ $_ = 'Snafu' } -ForTask 'NoOpTask'
         WhenRunningMockedTask 'NoOpTask' -ErrorAction SilentlyContinue
-        ThenThrewException 'invalid\ value:\ ''Snafu'''
+        ThenThrewException 'invalid\ value\ "Snafu"'
         ThenTaskNotRun 'NoOpTask'
     }
 
     It 'should use defaults value for OnlyOnBranch property' {
-        GivenDefaults @{ 'OnlyOnBranch' = 'Snafu' } -ForTask 'NoOpTask'
+        GivenDefaults @{ '.OnlyOnBranch' = 'Snafu' } -ForTask 'NoOpTask'
         GivenScmBranch 'Snafu'
         WhenRunningMockedTask 'NoOpTask'
         ThenTaskRan 'NoOpTask'
     }
 
     It 'should use defaults value for ExceptOnBranch property' {
-        GivenDefaults @{ 'ExceptOnBranch' = 'Snafu' } -ForTask 'NoOpTask'
+        GivenDefaults @{ '.ExceptOnBranch' = 'Snafu' } -ForTask 'NoOpTask'
         GivenScmBranch 'Snafu'
         WhenRunningMockedTask 'NoOpTask'
         ThenTaskNotRun 'NoOpTask'
@@ -899,7 +924,7 @@ Describe 'Invoke-WhiskeyTask' {
 
     It 'should use defaults value for WorkingDirectory property' {
         GivenWorkingDirectory 'Snafu'
-        GivenDefaults @{ 'WorkingDirectory' = 'Snafu' } -ForTask 'NoOpTask'
+        GivenDefaults @{ '.WorkingDirectory' = 'Snafu' } -ForTask 'NoOpTask'
         WhenRunningMockedTask 'NoOpTask' -ThatMarksWorkingDirectory
         ThenTaskRan 'NoOpTask' -InWorkingDirectory 'Snafu'
     }
@@ -907,7 +932,7 @@ Describe 'Invoke-WhiskeyTask' {
     It 'should use defaults variable for WorkingDirectory property' {
         GivenVariable 'Fubar' 'Snafu'
         GivenWorkingDirectory 'Snafu'
-        GivenDefaults @{ 'WorkingDirectory' = '$(Fubar)' } -ForTask 'NoOpTask'
+        GivenDefaults @{ '.WorkingDirectory' = '$(Fubar)' } -ForTask 'NoOpTask'
         WhenRunningMockedTask 'NoOpTask' -ThatMarksWorkingDirectory
         ThenTaskRan 'NoOpTask' -InWorkingDirectory 'Snafu'
     }
@@ -1012,7 +1037,7 @@ Describe 'Invoke-WhiskeyTask' {
     }
 
     It 'should run or not run OnlyOnPlatform Windows task' {
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ OnlyOnPlatform = 'Windows' }
+        WhenRunningMockedTask 'NoOpTask' -Parameter @{ '.OnlyOnPlatform' = 'Windows' }
         if( $IsWindows )
         {
             ThenTaskRan 'NoOpTask'
@@ -1024,7 +1049,7 @@ Describe 'Invoke-WhiskeyTask' {
     }
 
     It 'should run or not run OnlyOnPlatform Linux task' {
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ OnlyOnPlatform = 'Linux' }
+        WhenRunningMockedTask 'NoOpTask' -Parameter @{ '.OnlyOnPlatform' = 'Linux' }
         if( $IsLinux )
         {
             ThenTaskRan 'NoOpTask'
@@ -1036,7 +1061,7 @@ Describe 'Invoke-WhiskeyTask' {
     }
 
     It 'should run or not run OnlyOnPlatform macOS task' {
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ OnlyOnPlatform = 'MacOS' }
+        WhenRunningMockedTask 'NoOpTask' -Parameter @{ '.OnlyOnPlatform' = 'MacOS' }
         if( $IsMacOS )
         {
             ThenTaskRan 'NoOpTask'
@@ -1048,7 +1073,7 @@ Describe 'Invoke-WhiskeyTask' {
     }
 
     It 'should run or not run OnlyOnPlatform Windows or macOS task' {
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ OnlyOnPlatform = @( 'Windows','MacOS' ) }
+        WhenRunningMockedTask 'NoOpTask' -Parameter @{ '.OnlyOnPlatform' = @( 'Windows','MacOS' ) }
         if( $IsLinux )
         {
             ThenTaskNotRun 'NoOpTask'
@@ -1060,13 +1085,13 @@ Describe 'Invoke-WhiskeyTask' {
     }
 
     It 'should validate OnlyOnPlatform' {
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ OnlyOnPlatform = 'Blarg' } -ErrorAction SilentlyContinue
+        WhenRunningMockedTask 'NoOpTask' -Parameter @{ '.OnlyOnPlatform' = 'Blarg' } -ErrorAction SilentlyContinue
         ThenTaskNotRun 'NoOpTask'
         ThenThrewException ([regex]::Escape('Invalid platform "Blarg"'))
     }
 
     It 'should run or not run ExceptOnPlatform Windows task' {
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ ExceptOnPlatform = 'Windows' }
+        WhenRunningMockedTask 'NoOpTask' -Parameter @{ '.ExceptOnPlatform' = 'Windows' }
         if( $IsWindows )
         {
             ThenTaskNotRun 'NoOpTask'
@@ -1078,7 +1103,7 @@ Describe 'Invoke-WhiskeyTask' {
     }
 
     It 'should run or not run ExceptOnPlatform Linux task' {
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ ExceptOnPlatform = 'Linux' }
+        WhenRunningMockedTask 'NoOpTask' -Parameter @{ '.ExceptOnPlatform' = 'Linux' }
         if( $IsLinux )
         {
             ThenTaskNotRun 'NoOpTask'
@@ -1090,7 +1115,7 @@ Describe 'Invoke-WhiskeyTask' {
     }
 
     It 'should run or not run ExceptOnPlatform macOS task' {
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ ExceptOnPlatform = 'MacOS' }
+        WhenRunningMockedTask 'NoOpTask' -Parameter @{ '.ExceptOnPlatform' = 'MacOS' }
         if( $IsMacOS )
 
         {
@@ -1103,7 +1128,7 @@ Describe 'Invoke-WhiskeyTask' {
     }
 
     It 'should run or not run ExceptOnPlatform Windows and macOS task' {
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ ExceptOnPlatform = @( 'Windows','MacOS' ) }
+        WhenRunningMockedTask 'NoOpTask' -Parameter @{ '.ExceptOnPlatform' = @( 'Windows','MacOS' ) }
         if( $IsLinux )
         {
             ThenTaskRan 'NoOpTask'
@@ -1115,7 +1140,7 @@ Describe 'Invoke-WhiskeyTask' {
     }
 
     It 'should validate ExceptOnPlatform' {
-        WhenRunningMockedTask 'NoOpTask' -Parameter @{ ExceptOnPlatform = 'Blarg' } -ErrorAction SilentlyContinue
+        WhenRunningMockedTask 'NoOpTask' -Parameter @{ '.ExceptOnPlatform' = 'Blarg' } -ErrorAction SilentlyContinue
         ThenTaskNotRun 'NoOpTask'
         ThenThrewException ([regex]::Escape('Invalid platform "Blarg"'))
     }
@@ -1167,45 +1192,64 @@ Describe 'Invoke-WhiskeyTask' {
 
     It 'should set tasks''s ErrorActionPreference' {
         $ErrorActionPreference = 'Ignore'
-        WhenRunningTask 'Log' -Parameter @{ Message = 'FAIL!'; Level = 'Error' ; 'ErrorAction' = 'Stop' } -ErrorVariable 'errors'
+        WhenRunningTask 'Log' `
+                        -Parameter @{ Message = 'FAIL!'; Level = 'Error' ; '.ErrorAction' = 'Stop' } `
+                        -ErrorVariable 'errors'
         ThenPipelineFailed
         ThenThrewException 'FAIL!'
     }
 
     It 'should set tasks''s WarningPreference' {
         $WarningPreference = 'Ignore'
-        WhenRunningTask 'Log' -Parameter @{ Message = 'WARNING!'; Level = 'Warning' ; 'WarningAction' = 'Continue' } -WarningVariable 'warnings'
+        WhenRunningTask 'Log' `
+                        -Parameter @{ Message = 'WARNING!'; Level = 'Warning' ; '.WarningAction' = 'Continue' } `
+                        -WarningVariable 'warnings'
         ThenPipelineSucceeded
         $warnings | Should -Match 'WARNING!'
     }
 
     It 'should set tasks''s InformationPreference' {
         $InformationPreference = 'Ignore'
-        WhenRunningTask 'Log' -Parameter @{ Message = 'INFORMATION!'; 'InformationAction' = 'Continue' } -InformationVariable 'infos'
+        WhenRunningTask 'Log' `
+                        -Parameter @{ Message = 'INFORMATION!'; '.InformationAction' = 'Continue' } `
+                        -InformationVariable 'infos'
         ThenPipelineSucceeded
         $infos | Should -Match 'INFORMATION!'
     }
 
     It 'should set tasks''s VerbosePreference' {
         $VerbosePreference = 'Ignore'
-        WhenRunningTask 'Log' -Parameter @{ Message = 'VERBOSE!'; 'Level' = 'Verbose'; 'Verbose' = 'true' }
+        WhenRunningTask 'Log' -Parameter @{ Message = 'VERBOSE!'; 'Level' = 'Verbose'; '.Verbose' = 'true' }
         ThenPipelineSucceeded
         $script:output | Should -Match 'VERBOSE!'
     }
 
     It 'should set tasks''s DebugPreference' {
         $DebugPreference = 'Ignore'
-        WhenRunningTask 'Log' -Parameter @{ Message = 'DEBUG!'; 'Level' = 'Debug'; 'Debug' = 'true' }
+        WhenRunningTask 'Log' -Parameter @{ Message = 'DEBUG!'; 'Level' = 'Debug'; '.Debug' = 'true' }
         ThenPipelineSucceeded
         $script:output | Should -Match 'DEBUG!'
     }
 
-    It 'should capture task output in Whiskey variable' {
-        WhenRunningTask 'GenerateOutputTask' -Parameter @{ Output = 'task output text'; OutVariable = 'TASK_OUTPUT' }
-        ThenPipelineSucceeded
-        $script:output | Should -BeNullOrEmpty
-        $script:context.Variables.ContainsKey('TASK_OUTPUT') | Should -BeTrue
-        $script:context.Variables['TASK_OUTPUT'] | Should -Be 'task output text'
+    Context 'task does not have CmdletBinding attribute' {
+        It 'captures task output in Whiskey variable and sends to STDOUT' {
+            WhenRunningTask 'GenerateOutputTask' -Parameter @{ 'Output' = 'task output text'; '.OutVariable' = 'TASK_OUTPUT' }
+            ThenPipelineSucceeded
+            $script:output | Should -Be 'task output text'
+            $script:context.Variables.ContainsKey('TASK_OUTPUT') | Should -BeTrue
+            $script:context.Variables['TASK_OUTPUT'] | Should -Be 'task output text'
+        }
+    }
+
+    Context 'task has CmdletBinding attribute' {
+        It 'captures task output in Whiskey variable and sends to STDOUT' {
+            WhenRunningTask 'GenerateOutputTaskWithCmdletBinding' `
+                            -Parameter @{ Output = 'task output text'; '.OutVariable' = 'TASK_OUTPUT' }
+            ThenPipelineSucceeded
+            $script:output | Should -Be 'task output text'
+            $script:context.Variables.ContainsKey('TASK_OUTPUT') | Should -BeTrue
+            $script:context.Variables['TASK_OUTPUT'] | Should -Be 'task output text'
+        }
     }
 
     $notOnWindows = (Test-Path -Path 'variable:IsWindows') -and -not $IsWindows

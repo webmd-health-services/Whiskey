@@ -7,7 +7,7 @@ function Resolve-WhiskeyVariable
 
     .DESCRIPTION
     The `Resolve-WhiskeyVariable` function replaces any variables in strings, arrays, or hashtables with their values. Variables have the format `$(VARIABLE_NAME)`. Variables are expanded in each item of an array. Variables are expanded in each value of a hashtable. If an array or hashtable contains an array or hashtable, variables are expanded in those objects as well, i.e. `Resolve-WhiskeyVariable` recursivelye expands variables in all arrays and hashtables.
-    
+
     You can add variables to replace via the `Add-WhiskeyVariable` function. If a variable doesn't exist, environment variables are used. If a variable has the same name as an environment variable, the variable value is used instead of the environment variable's value. If no variable or environment variable is found, `Resolve-WhiskeyVariable` will write an error and return the origin string.
 
     See the [Variables](https://github.com/webmd-health-services/Whiskey/wiki/Variables) page on the [Whiskey wiki](https://github.com/webmd-health-services/Whiskey/wiki) for a list of variables.
@@ -50,9 +50,9 @@ function Resolve-WhiskeyVariable
         [AllowNull()]
         # The object on which to perform variable replacement/substitution. If the value is a string, all variables in the string are replaced with their values.
         #
-        # If the value is an array, variable expansion is done on each item in the array. 
+        # If the value is an array, variable expansion is done on each item in the array.
         #
-        # If the value is a hashtable, variable replcement is done on each value of the hashtable. 
+        # If the value is a hashtable, variable replcement is done on each value of the hashtable.
         #
         # Variable expansion is performed on any arrays and hashtables found in other arrays and hashtables, i.e. arrays and hashtables are searched recursively.
         [Object]$InputObject,
@@ -78,7 +78,7 @@ function Resolve-WhiskeyVariable
 
         $version = $Context.Version
         $prereleaseID = ''
-        if( $version.SemVer2.Prerelease -match '^(.*)\..*$' )
+        if ($version.Semver2 -and $version.SemVer2.Prerelease -match '^(.*)\..*$')
         {
             $prereleaseID = $Matches[1]
         }
@@ -141,7 +141,7 @@ function Resolve-WhiskeyVariable
             # Can't modify a collection while enumerating it.
             foreach( $key in $InputObject.Keys )
             {
-                $newKey = $key | Resolve-WhiskeyVariable -Context $Context  
+                $newKey = $key | Resolve-WhiskeyVariable -Context $Context
                 if( $newKey -ne $key )
                 {
                     $toRemove.Add($key)
@@ -208,7 +208,7 @@ function Resolve-WhiskeyVariable
                 }
                 ++$needleEnd
             }
-            
+
             $variableName = $haystack.Substring($needleStart + 2, $needleEnd - $needleStart - 2)
             $memberName = $null
             $arguments = $null
@@ -253,7 +253,7 @@ function Resolve-WhiskeyVariable
                                                     continue
                                                 }
                                             }
-                                            
+
                                             $inString = -not $inString
                                             continue
                                         }
@@ -298,7 +298,7 @@ function Resolve-WhiskeyVariable
             else
             {
                 Write-WhiskeyError -Context $Context -Message ('Variable ''{0}'' does not exist. We were trying to replace it in the string ''{1}''. You can:
-                
+
 * Use the `Add-WhiskeyVariable` function to add a variable named ''{0}'', e.g. Add-WhiskeyVariable -Context $context -Name ''{0}'' -Value VALUE.
 * Create an environment variable named ''{0}''.
 * Prevent variable expansion by escaping the variable with a backtick or backslash, e.g. `$({0}) or \$({0}).

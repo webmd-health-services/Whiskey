@@ -4,8 +4,11 @@ $TestPSModulesDirectoryName = 'PSModules'
 $exportPlatformVars = $false
 if( -not (Get-Variable -Name 'IsLinux' -ErrorAction Ignore) )
 {
+    [Diagnostics.CodeAnalysis.SuppressMessage('PSAvoidAssignmentToAutomaticVariable', '')]
     $IsLinux = $false
+    [Diagnostics.CodeAnalysis.SuppressMessage('PSAvoidAssignmentToAutomaticVariable', '')]
     $IsMacOS = $false
+    [Diagnostics.CodeAnalysis.SuppressMessage('PSAvoidAssignmentToAutomaticVariable', '')]
     $IsWindows = $true
     $exportPlatformVars = $true
 }
@@ -21,6 +24,7 @@ elseif( $IsMacOS )
 }
 $downloadCachePath = Join-Path -Path $PSScriptRoot -ChildPath ('..\.output\.downloadcache-{0}' -f $WhiskeyPlatform)
 $downloadCachePath = [IO.Path]::GetFullPath($downloadCachePath)
+[Diagnostics.CodeAnalysis.SuppressMessage('PSUseDeclaredVarsMoreThanAssignments', '')]
 $WhiskeyTestDownloadCachePath = $downloadCachePath
 
 $testNum = 0
@@ -44,46 +48,60 @@ function ConvertTo-Yaml
         $d = [System.Collections.Generic.List[Object]](New-Object "System.Collections.Generic.List[Object]")
     }
     PROCESS {
-        if($data -ne $null) {
+        if($null -ne $data)
+        {
             $d.Add($data)
         }
     }
     END {
-        if($d -eq $null -or $d.Count -eq 0){
+        if($d -eq $null -or $d.Count -eq 0)
+        {
             return
         }
-        if($d.Count -eq 1) {
+        if($d.Count -eq 1)
+        {
             $d = $d[0]
         }
         #$norm = Convert-PSObjectToGenericObject $d
-        if($OutFile) {
+        if($OutFile)
+        {
             $parent = Split-Path $OutFile
-            if(!(Test-Path $parent)) {
+            if(!(Test-Path $parent))
+            {
                 Throw "Parent folder for specified path does not exist"
             }
-            if((Test-Path $OutFile) -and !$Force){
+            if((Test-Path $OutFile) -and !$Force)
+            {
                 Throw "Target file already exists. Use -Force to overwrite."
             }
             $wrt = New-Object "System.IO.StreamWriter" $OutFile
-        } else {
+        }
+        else
+        {
             $wrt = New-Object "System.IO.StringWriter"
         }
 
-        $options = 0
-        try {
+        try
+        {
             $builder = New-Object 'YamlDotNet.Serialization.SerializerBuilder'
-            if ($JsonCompatible) {
+            if ($JsonCompatible)
+            {
                 # No indent options :~(
                 $builder.JsonCompatible()
             }
             $serializer = $builder.Build()
             $serializer.Serialize($wrt, $d)
-        } finally {
+        }
+        finally
+        {
             $wrt.Close()
         }
-        if($OutFile){
+        if($OutFile)
+        {
             return
-        }else {
+        }
+        else
+        {
             return $wrt.ToString()
         }
     }
@@ -600,6 +618,7 @@ function Reset-WhiskeyPSModulePath
 
 function ThenErrorRecord
 {
+    [Diagnostics.CodeAnalysis.SuppressMessage('PSAvoidAssignmentToAutomaticVariable', '')]
     param(
         [switch]$Empty,
         [String]$Matches
@@ -729,7 +748,9 @@ function Write-CaughtError
     Write-Information $message -InformationAction Continue
 }
 
+[Diagnostics.CodeAnalysis.SuppressMessage('PSUseDeclaredVarsMoreThanAssignments', '')]
 $SuccessCommandScriptBlock = { 'exit 0' | sh }
+[Diagnostics.CodeAnalysis.SuppressMessage('PSUseDeclaredVarsMoreThanAssignments', '')]
 $FailureCommandScriptBlock = { 'exit 1' | sh }
 if( $IsWindows )
 {

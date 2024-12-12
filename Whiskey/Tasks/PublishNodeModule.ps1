@@ -4,7 +4,7 @@ function Publish-WhiskeyNodeModule
     [Whiskey.Task('PublishNodeModule',
         Obsolete,
         ObsoleteMessage='The "PublishNodeModule" task is obsolete and will be removed in a future version of ' +
-                        'Whiskey. Instead, install a global version of Node.js (or use the "InstallNode" task to ' +
+                        'Whiskey. Instead, install a global version of Node.js (or use the "InstallNodeJs" task to ' +
                         'install a local private instance of Node.js that will get added to the build''s PATH ' +
                         'environment variable) then add `npm version $(WHISKEY_SEMVER2_NO_BUILD_METADATA) ' +
                         '--no-git-tag-version --allow-same-version`, `npm prune --production`, and `npm publish` ' +

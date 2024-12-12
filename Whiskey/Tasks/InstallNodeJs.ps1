@@ -1,6 +1,6 @@
 function Install-Node
 {
-    [Whiskey.Task('InstallNode')]
+    [Whiskey.Task('InstallNodeJs')]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Context]$TaskContext,
@@ -45,7 +45,7 @@ function Install-Node
             $nodeVersion = $nodeVersions | Where-Object 'version' -Like "v${versionWildcard}" | Select-Object -First 1
             if (-not $nodeVersion)
             {
-                Write-WhiskeyError -Context $TaskContext -Message "Node v${Version} does not exist."
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message "Node v${Version} does not exist."
                 return
             }
         }
@@ -104,7 +104,7 @@ function Install-Node
 
             if (-not $pkgChecksum)
             {
-                $msg = "Node.js package will not be validated because the ""${filename}"" package's checksum is " +
+                $msg = "Node.js package will not be validated because the $($filename | Format-Path) package's checksum is " +
                        "missing from ${checksumsUrl}."
                 Write-WhiskeyWarning -Context $TaskContext -Message $msg
             }
@@ -133,7 +133,7 @@ function Install-Node
 
         if (-not (Test-Path -Path $outputDirPath))
         {
-            Write-WhiskeyDebug -Message "Creating output directory ""${outputDirPath}""."
+            Write-WhiskeyDebug -Message "Creating output directory $($outputDirPath | Format-Path)."
             New-Item -Path $outputDirPath -ItemType 'Directory' -Force | Out-Null
         }
 
@@ -156,7 +156,7 @@ function Install-Node
             }
             else
             {
-                Write-WhiskeyError -Message "Exception downloading ""${pkgUrl}"": $($_)"
+                Write-WhiskeyError -Message "Exception downloading ${pkgUrl}: $($_)"
                 $responseInfo = ' Please see previous error for more information.'
                 return
             }
@@ -167,7 +167,7 @@ function Install-Node
                 $errorMsg = "$($errorMsg) It looks like this version of Node wasn't packaged as a ZIP file. " +
                             'Please use Node v4.5.0 or newer.'
             }
-            Write-WhiskeyError -Message $errorMsg -ErrorAction Stop
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message $errorMsg
             return
         }
 
@@ -177,8 +177,9 @@ function Install-Node
             if ($pkgChecksum -ne $actualChecksum.Hash)
             {
                 $msg = "Failed to install Node.js ${Version} because the SHA256 checksum of the file downloaded " +
-                        "from ${pkgUrl}, ${actualChecksum}, doesn't match the expected checksum, ${pkgChecksum}."
-                Write-WhiskeyError -Context $TaskContext -Message $msg
+                       "from ${pkgUrl}, ${actualChecksum}, doesn't match the expected checksum, ${pkgChecksum}."
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
+                return
             }
         }
 
@@ -232,7 +233,7 @@ function Install-Node
             $exists = $false
             $lastError = $null
             $nodeDirectoryName = $DestinationPath | Split-Path -Leaf
-            Write-WhiskeyDebug "Renaming ""$($extractDirPath)"" -> ""${nodeDirectoryName}""."
+            Write-WhiskeyDebug "Renaming $($extractDirPath | Format-Path) -> $($nodeDirectoryName | Format-Path)."
             do
             {
                 Rename-Item -Path $extractDirPath -NewName $nodeDirectoryName -ErrorAction SilentlyContinue
@@ -254,9 +255,10 @@ function Install-Node
 
             if (-not $exists)
             {
-                $msg = "Failed to install Node.js ${Version} to ""$($DestinationPath)"" because renaming directory " +
-                        """$($outputDirectoryName)"" to ""${nodeDirectoryName}"" failed: $($lastError)"
-                Write-WhiskeyError -Context $TaskContext -Message $msg
+                $msg = "Failed to install Node.js ${Version} to $($DestinationPath | Format-Path) because renaming " +
+                       "directory $($outputDirectoryName | Format-Path) to $($nodeDirectoryName | Format-Path) " +
+                       "failed: $($lastError)"
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
                 return
             }
 
@@ -268,23 +270,31 @@ function Install-Node
                 New-Item -Path $DestinationPath -ItemType 'Directory' -Force | Out-Null
             }
 
-            $msg = "tar -xJf ""${PackagePath}"" -C ""${DestinationPath}"" --strip-components=1"
-            Write-WhiskeyVerbose -Context $TAskContext -Message $msg
+            $msg = "tar -xJf $($PackagePath | Format-Path) -C $($DestinationPath | Format-Path) --strip-components=1"
+            Write-WhiskeyVerbose -Context $TaskContext -Message $msg
             tar -xJf $PackagePath -C $DestinationPath '--strip-components=1' | Write-WhiskeyVerbose
-            if( $LASTEXITCODE )
+            if ($LASTEXITCODE)
             {
-                $msg = "Failed to extract Node.js ${Version} package ""${PackagePath}"" to ""${DestinationPath}""."
-                Write-WhiskeyError -Context $TaskContext -Message $msg
+                $msg = "Failed to extract Node.js ${Version} package $($PackagePath | Format-Path) to " +
+                       "$($DestinationPath | Format-Path)."
+                Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
                 return
             }
         }
     }
 
-    $source = ''
+    $nodeSource = ''
+    $npmSource = ''
+    $whiskeyYmlPath = $TaskContext.ConfigurationPath | Resolve-WhiskeyRelativePath
 
     if ($Version)
     {
-        $source = $TaskContext.ConfigurationPath | Resolve-WhiskeyRelativePath
+        $nodeSource = $whiskeyYmlPath
+    }
+
+    if ($NpmVersion)
+    {
+        $npmSource = $whiskeyYmlPath
     }
 
     if (-not $Version)
@@ -292,7 +302,7 @@ function Install-Node
         $nodeVersionPath = Join-Path -Path $TaskContext.BuildRoot -ChildPath '.node-version'
         if ((Test-Path -Path $nodeVersionPath -PathType Leaf))
         {
-            $source = $nodeVersionPath | Resolve-WhiskeyRelativePath
+            $nodeSource = $nodeVersionPath | Resolve-WhiskeyRelativePath
             $Version = Get-Content -Path $nodeVersionPath -ReadCount 1
         }
     }
@@ -313,7 +323,6 @@ function Install-Node
 
         if ($PackageJsonPath -and (Test-Path -Path $PackageJsonPath -PathType Leaf))
         {
-            $source = """${PackageJsonPath}"""
             $whiskeyPkgCfg =
                 Get-Content -Path $PackageJsonPath |
                 ConvertFrom-Json |
@@ -321,11 +330,19 @@ function Install-Node
             if (-not $Version)
             {
                 $Version = $whiskeyPkgCfg | Select-Object -ExpandProperty 'node' -ErrorAction Ignore
+                if ($Version)
+                {
+                    $nodeSource = $PackageJsonPath
+                }
             }
 
             if (-not $NpmVersion)
             {
                 $NpmVersion = $whiskeyPkgCfg | Select-Object -ExpandProperty 'npm' -ErrorAction Ignore
+                if ($NpmVersion)
+                {
+                    $npmSource = $PackageJsonPath
+                }
             }
         }
     }
@@ -340,12 +357,9 @@ function Install-Node
                                             -OnlySinglePath `
                                             -PathType Directory `
                                             -AllowNonexistent
-    $sourceMsg = ''
-    if ($source)
-    {
-        $sourceMsg = " (version read from file ${source})"
-    }
 
+    $Version = $Version -replace '^v',''
+    $NpmVersion = $NpmVersion -replace '^v',''
     $versionToInstall = Resolve-NodeJsVersion -Version $Version
     if (-not $versionToInstall)
     {
@@ -368,9 +382,21 @@ function Install-Node
         $currentNodeVersion = & $nodePath '--version'
         if ($currentNodeVersion -eq $versionToInstall)
         {
-            Write-WhiskeyVerbose "Node.js ${versionToInstall} already installed in ""${Path}""."
+            Write-WhiskeyVerbose "Node.js ${versionToInstall} already installed in $($Path | Format-Path)."
             $installNode = $false
         }
+    }
+
+    $nodeSourceMsg = ' (the latest active LTS version)'
+    if ($nodeSource)
+    {
+        $nodeSourceMsg = " (version read from file $($nodeSource | Format-Path))"
+    }
+
+    $npmSourceMsg = ''
+    if ($npmSource)
+    {
+        $npmSourceMsg = " (version read from file $($npmSource | Format-Path))"
     }
 
     if ($installNode)
@@ -381,7 +407,7 @@ function Install-Node
             return
         }
 
-        $msg = "Installing Node.js ${versionToInstall} to ""${Path}""${sourceMsg}."
+        $msg = "Installing Node.js ${versionToInstall} to $($Path | Format-Path)${nodeSourceMsg}."
         Write-WhiskeyInfo -Context $TaskContext -Message $msg
 
         $installPath = Join-Path -Path $TaskContext.BuildRoot -ChildPath $Path
@@ -398,7 +424,8 @@ function Install-Node
     $nodeDirPath = $nodePath | Split-Path -Parent
     if ($pathItems -notcontains $nodeDirPath)
     {
-        Write-WhiskeyInfo -Context $TaskContext -Message "Adding ""${nodeDirPath}"" to PATH environment variable."
+        $msg = "Adding $($nodeDirPath | Format-Path) to PATH environment variable."
+        Write-WhiskeyInfo -Context $TaskContext -Message $msg
         $newPath = "${nodeDirPath}$([IO.Path]::PathSeparator)${env:PATH}"
         [Environment]::SetEnvironmentVariable('PATH', $newPath, [EnvironmentVariableTarget]::Process)
     }
@@ -409,7 +436,7 @@ function Install-Node
         $currentNpmVersion = & $npmPath '--version'
         if ($NpmVersion -ne $currentNpmVersion)
         {
-            $msg = "Installing npm@${NpmVersion}${sourceMsg}."
+            $msg = "Installing npm@${NpmVersion}${npmSourceMsg}."
             Write-WhiskeyInfo -Context $TaskContext -Message $msg
             & $npmPath install "npm@${NpmVersion}" '-g'
         }

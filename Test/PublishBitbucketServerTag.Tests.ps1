@@ -12,13 +12,13 @@ BeforeAll {
     $script:context = $null
     $script:threwException = $false
     $script:version = $null
-    $script:uri = $null
+    $script:Url = $null
     $script:credential = $null
     $script:credentialID = $null
     $script:repositoryKey = $null
     $script:projectKey = $null
     $script:commitID = $null
-    $script:gitUri = $null
+    $script:gitUrl = $null
     $script:isPullRequest = $false
 
     function GivenACommit
@@ -40,10 +40,10 @@ BeforeAll {
     function GivenBBServerAt
     {
         param(
-            $Uri
+            $Url
         )
 
-        $script:uri = $Uri
+        $script:url = $Url
     }
 
     function GivenBuildingPullRequest
@@ -78,17 +78,17 @@ BeforeAll {
     function GivenGitUrl
     {
         param(
-            $Uri
+            $Url
         )
 
         $script:projectKey = $null
         $script:repositoryKey = $null
-        $script:gitUri = $Uri
+        $script:gitUrl = $Url
     }
 
-    function GivenNoBBServerUri
+    function GivenNoBBServerUrl
     {
-        $script:uri = $null
+        $script:url = $null
     }
 
     function GivenNoCredential
@@ -125,7 +125,7 @@ BeforeAll {
                                                  -ForBuildRoot $script:testRoot `
                                                  -IncludePSModule 'BitbucketServerAutomation'
 
-        $script:context.BuildMetadata.ScmUri = $script:gitUri
+        $script:context.BuildMetadata.ScmUri = $script:gitUrl
 
         if( $script:isPullRequest )
         {
@@ -135,9 +135,9 @@ BeforeAll {
         Mock -CommandName 'New-BBServerTag' -ModuleName 'Whiskey'
 
         $taskParameter = @{ }
-        if( $script:uri )
+        if( $script:url )
         {
-            $taskParameter['Uri'] = $script:uri
+            $taskParameter['Url'] = $script:url
         }
 
         if( $script:credentialID )
@@ -206,7 +206,7 @@ BeforeAll {
             $InRepository,
 
             [Parameter(Mandatory)]
-            $AtUri,
+            $AtUrl,
 
             [Parameter(Mandatory)]
             $AsUser,
@@ -223,7 +223,7 @@ BeforeAll {
         }
 
         Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
-            $Connection.Uri -eq $AtUri }
+            $Connection.Uri -eq $AtUrl }
         Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Connection.Credential.UserName -eq $AsUser }
         Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter { $Connection.Credential.GetNetworkCredential().Password -eq $WithPassword }
         Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 1 -ParameterFilter {
@@ -246,7 +246,7 @@ Describe 'PublishBitbucketServerTag' {
         Write-Debug 'PUBLISHBITBUCKETSERVERTAG  INIT  PSMODULEPATH'
         $env:PSModulePath -split ([IO.Path]::PathSeparator) | Write-Debug
 
-        $script:gitUri = ''
+        $script:gitUrl = ''
         $script:testRoot = New-WhiskeyTestRoot
         $script:isPullRequest = $false
     }
@@ -262,7 +262,7 @@ Describe 'PublishBitbucketServerTag' {
         GivenACommit
         GivenVersion '1.4.5'
         WhenTaggingACommit
-        ThenTheCommitShouldBeTagged '1.4.5' -InProject 'project' -InRepository 'repo' -AtUri 'https://bbserver.example.com' -AsUser 'username' -WithPassword 'password'
+        ThenTheCommitShouldBeTagged '1.4.5' -InProject 'project' -InRepository 'repo' -AtUrl 'https://bbserver.example.com' -AsUser 'username' -WithPassword 'password'
         ThenTaskSucceeds
     }
 
@@ -273,7 +273,7 @@ Describe 'PublishBitbucketServerTag' {
         GivenACommit
         GivenVersion '34.432.3'
         WhenTaggingACommit
-        ThenTheCommitShouldBeTagged '34.432.3' -InProject 'project' -InRepository 'repo' -AtUri 'https://bbserver.example.com' -AsUser 'username' -WithPassword 'password'
+        ThenTheCommitShouldBeTagged '34.432.3' -InProject 'project' -InRepository 'repo' -AtUrl 'https://bbserver.example.com' -AsUser 'username' -WithPassword 'password'
         ThenTaskSucceeds
     }
 
@@ -284,7 +284,7 @@ Describe 'PublishBitbucketServerTag' {
         GivenACommit
         GivenVersion '34.432.3'
         WhenTaggingACommit
-        ThenTheCommitShouldBeTagged '34.432.3' -InProject 'snafu' -InRepository 'fubar' -AtUri 'https://bbserver.example.com' -AsUser 'username' -WithPassword 'password'
+        ThenTheCommitShouldBeTagged '34.432.3' -InProject 'snafu' -InRepository 'fubar' -AtUrl 'https://bbserver.example.com' -AsUser 'username' -WithPassword 'password'
         ThenTaskSucceeds
     }
 
@@ -302,11 +302,11 @@ Describe 'PublishBitbucketServerTag' {
         ThenTaskFails '\bCredentialID\b.*\bis\ mandatory\b'
     }
 
-    It 'should fail when no URI' {
+    It 'should fail when no URL' {
         GivenCredential -ID 'id' -UserName 'fubar' -Password 'snafu'
-        GivenNoBBServerUri
+        GivenNoBBServerUrl
         WhenTaggingACommit -ErrorAction SilentlyContinue
-        ThenTaskFails '\bUri\b.*\bis\ mandatory\b'
+        ThenTaskFails '\bUrl\b.*\bis\ mandatory\b'
     }
 
     It 'should fail when no repository information' {
@@ -314,7 +314,7 @@ Describe 'PublishBitbucketServerTag' {
         GivenCredential -ID 'id' -UserName 'fubar' -Password 'snafu'
         GivenBBServerAt 'https://bitbucket.example.com'
         GivenACommit 'deadbeedeadbee'
-        WhenTaggingACommit -ErrorAction SilentlyContinue
+        WhenTaggingACommit #-ErrorAction SilentlyContinue
         ThenTaskFails '\bunable\ to\ determine\ the\ repository'
     }
 

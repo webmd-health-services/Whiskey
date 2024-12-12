@@ -189,20 +189,51 @@ if( $IsWindows )
 }
 
 [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '')]
-$CurrentPlatform = [Whiskey.Platform]::Unknown
+$script:currentPlatform = [Whiskey.Platform]::Unknown
 if( $IsLinux )
 {
-    $CurrentPlatform = [Whiskey.Platform]::Linux
+    $script:currentPlatform = [Whiskey.Platform]::Linux
 }
 elseif( $IsMacOS )
 {
-    $CurrentPlatform = [Whiskey.Platform]::MacOS
+    $script:currentPlatform = [Whiskey.Platform]::MacOS
 }
 elseif( $IsWindows )
 {
-    $CurrentPlatform = [Whiskey.Platform]::Windows
+    $script:currentPlatform = [Whiskey.Platform]::Windows
 }
 
+# List of builtin, common property names.
+$script:debugPropertyName = '.Debug'
+$script:errorActionPropertyName = '.ErrorAction'
+$script:exceptByPropertyName = '.ExceptBy'
+$script:exceptDuringPropertyName = '.ExceptDuring'
+$script:exceptOnBranchPropertyName = '.ExceptOnBranch'
+$script:exceptOnPlatformPropertyName = '.ExceptOnPlatform'
+$script:ifExistsPropertyName = '.IfExists'
+$script:informationActionPropertyName = '.InformationAction'
+$script:onlyByPropertyName = '.OnlyBy'
+$script:onlyDuringPropertyName = '.OnlyDuring'
+$script:onlyOnBranchPropertyName = '.OnlyOnBranch'
+$script:onlyOnPlatformPropertyName = '.OnlyOnPlatform'
+$script:outVariablePropertyName = '.OutVariable'
+$script:unlessExistsPropertyName = '.UnlessExists'
+$script:verbosePropertyName = '.Verbose'
+$script:warningActionPropertyName = '.WarningAction'
+$script:workingDirectoryPropertyName = '.WorkingDirectory'
+
+$script:skipPropertyNames = @(
+    $script:exceptByPropertyName
+    $script:exceptDuringPropertyName
+    $script:exceptOnBranchPropertyName
+    $script:exceptOnPlatformPropertyName
+    $script:ifExistsPropertyName
+    $script:onlyByPropertyName
+    $script:onlyDuringPropertyName
+    $script:onlyOnBranchPropertyName
+    $script:onlyOnPlatformPropertyName
+    $script:unlessExistsPropertyName
+)
 
 Write-Timing -Message ('Dot-sourcing files.')
 $count = 0

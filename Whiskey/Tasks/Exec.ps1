@@ -103,7 +103,7 @@ function Invoke-WhiskeyExec
 
     # Don't use Start-Process. If/when a build runs in a background job, when Start-Process finishes, it immediately
     # terminates the build. Full stop.
-    & $resolvedPath $Argument
+    & $resolvedPath @Argument
     $exitCode = $LASTEXITCODE
 
     if (-not $SuccessExitCode)

@@ -108,6 +108,9 @@ function Invoke-WhiskeyTask
             Where-Object { $_ -is [Whiskey.RequiresToolAttribute] }
     }
 
+    $whiskeyYmlPath = $TaskContext.ConfigurationPath | Resolve-WhiskeyRelativePath
+    $whiskeyYmlDisplayPath = $whiskeyYmlPath | Format-Path
+
     $knownTasks = Get-WhiskeyTask -Force
 
     $task = $knownTasks | Where-Object { $_.Name -eq $Name }
@@ -119,14 +122,14 @@ function Invoke-WhiskeyTask
         if ($taskCount -gt 1)
         {
             $msg = "Found ${taskCount} tasks with alias ""{Name}"". Please update to use one of these task names: " +
-                   "$(($task | Select-Object -ExpandProperty 'Name') -join ', ')"
+                   "${whiskeyYmlDisplayPath} ($task | Select-Object -ExpandProperty 'Name') -join ', ')"
             Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
             return
         }
         if( $task -and $task.WarnWhenUsingAlias )
         {
             $msg = "Task ""${Name}"" is an alias to task ""$($task.Name)"". Please update " +
-                   """$($TaskContext.ConfigurationPath)"" to use the task''s actual name, ""$($task.Name)"", instead " +
+                   """$()"" to use the task''s actual name, ""$($task.Name)"", instead " +
                    'of the alias.'
             Write-WhiskeyWarning -Context $TaskContext -Message $msg
         }
@@ -143,8 +146,8 @@ function Invoke-WhiskeyTask
     if (-not $task)
     {
         $knownTaskNames = $knownTasks | Select-Object -ExpandProperty 'Name' | Sort-Object
-        $msg = "$($TaskContext.ConfigurationPath): ${Name}[$($TaskContext.TaskIndex)]: ""${Name}"" task does not " +
-               "exist. Supported tasks are:$([Environment]::NewLine) " +
+        $msg = "${whiskeyYmlDisplayPath}: ${Name}[$($TaskContext.TaskIndex)]: ""${Name}"" task does not exist. " +
+               "Supported tasks are:$([Environment]::NewLine) " +
                "$($knownTaskNames -join "$([Environment]::NewLine) * ")"
         throw $msg
     }
@@ -166,10 +169,10 @@ function Invoke-WhiskeyTask
         Write-WhiskeyWarning -Context $TaskContext -Message $message
     }
 
-    if( -not $task.Platform.HasFlag($CurrentPlatform) )
+    if( -not $task.Platform.HasFlag($script:currentPlatform) )
     {
         $msg = 'Unable to run task "{0}": it is only supported on the {1} platform(s) and we''re currently running on {2}.' -f `
-                    $Name,$task.Platform,$CurrentPlatform
+                    $Name,$task.Platform,$script:currentPlatform
         Write-WhiskeyError -Message $msg -ErrorAction Stop
         return
     }
@@ -181,21 +184,81 @@ function Invoke-WhiskeyTask
 
     Resolve-WhiskeyVariable -Context $TaskContext -InputObject $Parameter | Out-Null
 
-    [hashtable]$taskProperties = $Parameter.Clone()
-    $commonProperties = @{}
-    foreach( $commonPropertyName in @(
-        'OnlyBy',           'ExceptBy',
-        'OnlyOnBranch',     'ExceptOnBranch',
-        'OnlyDuring',       'ExceptDuring',
-        'OnlyOnPlatform',   'ExceptOnPlatform',
-        'IfExists',         'UnlessExists',
-        'WorkingDirectory', 'OutVariable' ) )
+    $psCommonParameterNames = @(
+        $script:debugPropertyName,
+        $script:errorActionPropertyName,
+        $script:informationActionPropertyName,
+        $script:outVariablePropertyName,
+        $script:verbosePropertyName,
+        $script:warningActionPropertyName
+    )
+
+    $whiskeyCommonPropertyNames = $script:skipPropertyNames + @( $script:workingDirectoryPropertyName )
+
+    $allCommonPropertyNames = $psCommonParameterNames + $whiskeyCommonPropertyNames
+
+    # Only common properties are allowed to start with a period. Warn users if we find a non-common property that begins
+    # with a period.
+    foreach ($propertyName in $Parameter.Keys)
     {
-        if ($taskProperties.ContainsKey($commonPropertyName))
+        if (-not $propertyName.StartsWith('.'))
         {
-            $commonProperties[$commonPropertyName] = $taskProperties[$commonPropertyName]
-            $taskProperties.Remove($commonPropertyName)
+            continue
         }
+
+        if ($allCommonPropertyNames -contains $propertyName)
+        {
+            continue
+        }
+
+        $msg = "Property ""${propertyName}"" on task ${Name} begins with a period character. Only Whiskey's " +
+               'built-in, common task properties can begin with a period. Please remove the period character from ' +
+               "property's name in ${whiskeyYmlDisplayPath}."
+        Write-WhiskeyWarning -Context $TaskContext -Message $msg
+    }
+
+    # Normalize common properties to ensure they begin with a period.
+    foreach ($propertyName in $allCommonPropertyNames)
+    {
+        $oldPropertyName = $propertyName.Substring(1)
+        if (-not $Parameter.ContainsKey($oldPropertyName))
+        {
+            continue
+        }
+
+        $msg = "Built-in, common task property names must now begin with a period character. Please update the " +
+               "${Name} task's ${oldPropertyName} property in ${whiskeyYmlDisplayPath}."
+        Write-WhiskeyWarning -Context $TaskContext -Message $msg
+
+        $Parameter[$propertyName] = $Parameter[$oldPropertyName]
+        [void]$Parameter.Remove($oldPropertyName)
+    }
+
+    [hashtable]$taskProperties = $Parameter.Clone()
+
+    $commonProperties = @{}
+    foreach ($propertyName in $whiskeyCommonPropertyNames)
+    {
+        if (-not $taskProperties.ContainsKey($propertyName))
+        {
+            continue
+        }
+
+        $commonProperties[$propertyName] = $taskProperties[$propertyName]
+        [void]$taskProperties.Remove($propertyName)
+    }
+
+    # Convert the common property names that are natively supported by PowerShell into their PowerShell names.
+    foreach ($propertyName in $psCommonParameterNames)
+    {
+        if (-not $taskProperties.ContainsKey($propertyName))
+        {
+            continue
+        }
+
+        $psParameterName = $propertyName.Substring(1)
+        $taskProperties[$psParameterName] = $taskProperties[$propertyName]
+        [void]$taskProperties.Remove($propertyName)
     }
 
     # Start every task in the BuildRoot.
@@ -246,12 +309,16 @@ function Invoke-WhiskeyTask
         try
         {
             $workingDirectory = $TaskContext.BuildRoot
-            if( $Parameter['WorkingDirectory'] )
+            if( $Parameter[$script:workingDirectoryPropertyName] )
             {
                 # We need a full path because we pass it to `IO.Path.SetCurrentDirectory`.
                 $workingDirectory =
-                    $Parameter['WorkingDirectory'] |
-                    Resolve-WhiskeyTaskPath -TaskContext $TaskContext -PropertyName 'WorkingDirectory' -Mandatory -OnlySinglePath -PathType 'Directory' |
+                    $Parameter[$script:workingDirectoryPropertyName] |
+                    Resolve-WhiskeyTaskPath -TaskContext $TaskContext `
+                                            -PropertyName $script:workingDirectoryPropertyName `
+                                            -Mandatory `
+                                            -OnlySinglePath `
+                                            -PathType 'Directory' |
                     Resolve-Path |
                     Select-Object -ExpandProperty 'ProviderPath'
             }
@@ -284,24 +351,24 @@ function Invoke-WhiskeyTask
                 $taskArgs.Remove('Debug')
             }
 
-            $outVariable = $commonProperties['OutVariable']
+            $outVarName = $Parameter[$script:outVariablePropertyName]
 
-            if ($outVariable)
+            # If the task doesn't have the [CmdletBinding()] parameter, fake it with Tee-Object.
+            if ($outVarName -and -not $taskArgs.ContainsKey('OutVariable'))
             {
-                $taskOutput = & $task.CommandName @taskArgs
-
-                if (-not $taskOutput)
-                {
-                    $taskOutput = ''
-                }
-
-                Add-WhiskeyVariable -Context $TaskContext -Name $outVariable -Value $taskOutput
+                & $task.CommandName @taskArgs | Tee-Object -Variable $outVarName
             }
             else
             {
                 & $task.CommandName @taskArgs
             }
 
+            if ($outVarName)
+            {
+                Add-WhiskeyVariable -Context $TaskContext `
+                                    -Name $outVarName `
+                                    -Value (Get-Variable -Name $outVarName -ValueOnly)
+            }
             $result = 'COMPLETED'
         }
         finally
