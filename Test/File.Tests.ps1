@@ -1,183 +1,189 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+BeforeAll {
+    Set-StrictMode -Version 'Latest'
 
-$failed = $false
-$context = $null
-$buildRoot = $null
-$variables = $null
+    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-function Init
-{
     $script:failed = $false
     $script:context = $null
-    $script:buildRoot = $TestDrive.FullName
-    $script:variables = @{}
-}
+    $script:buildRoot = $null
+    $script:testNum = 0
+    $script:variables = $null
 
-function GivenDirectory
-{
-    param(
-        $Path
-    )
-
-    $Path = Join-Path -Path $buildRoot -ChildPath $Path
-    New-Item -Path $Path -ItemType 'directory'
-}
-
-function GivenFile
-{
-    param(
-        $Path,
-        $Contains
-    )
-    $Path = Join-Path -Path $buildRoot -ChildPath $Path
-    if ($Contains)
+    function GivenDirectory
     {
-        New-Item -Path $Path -Value $Contains
-    }
-    else
-    {
-        New-Item -Path $Path
-    }
-}
+        param(
+            $Path
+        )
 
-function GivenVariable
-{
-    param(
-        $Name,
-        $WithValue
-    )
-
-    $script:variables[$Name] = $WithValue
-}
-
-function GivenWhiskeyYml
-{
-    param(
-        $Content
-    )
-
-    $Content | Set-Content -Path (Join-Path -Path $buildRoot -ChildPath 'whiskey.yml')
-}
-
-function ThenLastModified
-{
-    param(
-        $Path,
-        $After
-    )
-
-    $Path = Join-Path -Path $buildRoot -ChildPath $Path
-    (Get-Item $Path).LastWriteTime | Should -BeGreaterThan $After
-}
-
-function ThenFile
-{
-    param(
-        $Path,
-        $Contains
-    )
-
-    $Path = Join-Path -Path $buildRoot -ChildPath $Path
-
-    $Path | Should -Exist
-
-    if ($Contains)
-    {
-        $actualContent = Get-Content -Path $Path 
-        $actualContent | Should -BeExactly $Contains
+        $Path = Join-Path -Path $script:buildRoot -ChildPath $Path
+        New-Item -Path $Path -ItemType 'directory'
     }
 
-    else
+    function GivenFile
     {
-        $actualContent = Get-Content -Path $Path 
-        $actualContent | Should -BeNullOrEmpty
-        Get-Item -Path $Path | Select-Object -Expand 'Length' | Should -Be 0
-    }
-}
-
-function ThenNotFile
-{
-    param(
-        $Path
-    )
-
-    $Path = Join-Path -Path $buildroot -ChildPath $Path
-    $Path = [IO.Path]::GetFullPath($Path)
-
-    $Path | Should -Not -Exist
-}
-
-function ThenSuccess
-{
-    $Global:Error | Should -BeNullOrEmpty
-    $script:failed | Should -BeFalse
-}
-
-function ThenTaskFailed
-{
-    $Global:Error | Should -Not -BeNullOrEmpty
-    $script:failed | Should -BeTrue
-}
-
-function ThenError
-{
-    param(
-        $Matches
-    )
-
-    $Global:Error | Should -Match $Matches
-}
-
-function WhenRunningTask
-{
-    [CmdletBinding()]
-    param(
-    )
-
-    $Global:Error.Clear()
-
-    
-    try 
-    {
-
-        [Whiskey.Context]$script:context = New-WhiskeyTestContext -ForDeveloper -ConfigurationPath (Join-Path -Path $buildRoot -ChildPath 'whiskey.yml')
-        
-        foreach($key in $variables.Keys)
+        param(
+            $Path,
+            $Contains
+        )
+        $Path = Join-Path -Path $script:buildRoot -ChildPath $Path
+        if ($Contains)
         {
-            Add-WhiskeyVariable -Context $context -Name $key -Value $variables[$key]
+            New-Item -Path $Path -Value $Contains
         }
-
-        $tasks = 
-            $context.Configuration['Build'] | 
-            Where-Object { $_.ContainsKey('File') } | 
-            ForEach-Object { $_['File'] }
-        
-        foreach ($task in $tasks)
+        else
         {
-            try
-            {
-                Invoke-WhiskeyTask -TaskContext $context -Name 'File' -Parameter $task
-            }
-            catch
-            {
-                Write-Error -ErrorRecord $_
-                $script:failed = $true
-            }
+            New-Item -Path $Path
         }
     }
-    catch
+
+    function GivenVariable
     {
-        Write-Error -ErrorRecord $_
-        $script:failed = $true
+        param(
+            $Name,
+            $WithValue
+        )
+
+        $script:variables[$Name] = $WithValue
+    }
+
+    function GivenWhiskeyYml
+    {
+        param(
+            $Content
+        )
+
+        $Content | Set-Content -Path (Join-Path -Path $script:buildRoot -ChildPath 'whiskey.yml')
+    }
+
+    function ThenLastModified
+    {
+        param(
+            $Path,
+            $After
+        )
+
+        $Path = Join-Path -Path $script:buildRoot -ChildPath $Path
+        (Get-Item $Path).LastWriteTime | Should -BeGreaterThan $After
+    }
+
+    function ThenFile
+    {
+        param(
+            $Path,
+            $Contains
+        )
+
+        $Path = Join-Path -Path $script:buildRoot -ChildPath $Path
+
+        $Path | Should -Exist
+
+        if ($Contains)
+        {
+            $actualContent = Get-Content -Path $Path
+            $actualContent | Should -BeExactly $Contains
+        }
+
+        else
+        {
+            $actualContent = Get-Content -Path $Path
+            $actualContent | Should -BeNullOrEmpty
+            Get-Item -Path $Path | Select-Object -Expand 'Length' | Should -Be 0
+        }
+    }
+
+    function ThenNotFile
+    {
+        param(
+            $Path
+        )
+
+        $Path = Join-Path -Path $script:buildRoot -ChildPath $Path
+        $Path = [IO.Path]::GetFullPath($Path)
+
+        $Path | Should -Not -Exist
+    }
+
+    function ThenSuccess
+    {
+        $Global:Error | Should -BeNullOrEmpty
+        $script:failed | Should -BeFalse
+    }
+
+    function ThenTaskFailed
+    {
+        $Global:Error | Should -Not -BeNullOrEmpty
+        $script:failed | Should -BeTrue
+    }
+
+    function ThenError
+    {
+        param(
+            $Matches
+        )
+
+        $Global:Error | Should -Match $Matches
+    }
+
+    function WhenRunningTask
+    {
+        [CmdletBinding()]
+        param(
+        )
+
+        $Global:Error.Clear()
+
+
+        try
+        {
+            $configPath = Join-Path -Path $script:buildRoot -ChildPath 'whiskey.yml'
+            [Whiskey.Context]$script:context = New-WhiskeyTestContext -ForDeveloper `
+                                                                      -ConfigurationPath $configPath `
+                                                                      -ForBuildRoot $script:buildRoot
+
+            foreach($key in $script:variables.Keys)
+            {
+                Add-WhiskeyVariable -Context $script:context -Name $key -Value $script:variables[$key]
+            }
+
+            $tasks =
+                $script:context.Configuration['Build'] |
+                Where-Object { $_.ContainsKey('File') } |
+                ForEach-Object { $_['File'] }
+
+            foreach ($task in $tasks)
+            {
+                try
+                {
+                    Invoke-WhiskeyTask -TaskContext $script:context -Name 'File' -Parameter $task
+                }
+                catch
+                {
+                    Write-Error -ErrorRecord $_
+                    $script:failed = $true
+                }
+            }
+        }
+        catch
+        {
+            Write-Error -ErrorRecord $_
+            $script:failed = $true
+        }
     }
 }
 
-Describe 'File.when file doesn''t exist.' {
-    It 'should create the file' {
-        Init
+Describe 'File' {
+    BeforeEach {
+        $script:failed = $false
+        $script:context = $null
+        $script:buildRoot = Join-Path -Path $TestDrive -ChildPath ($script:testNum++)
+        New-Item -Path $script:buildRoot -ItemType Directory
+        $script:variables = @{}
+    }
+
+    It 'creates new file' {
         GivenWhiskeyYml @'
         Build:
         - File:
@@ -188,12 +194,8 @@ Describe 'File.when file doesn''t exist.' {
         ThenSuccess
         ThenFile -Path 'file.txt' -Contains 'Hello World.'
     }
-   
-}
 
-Describe 'File.when content contains variables' {
-    It 'should expand variable value in content'{
-        Init
+    It 'expand variables in content'{
         GivenVariable 'Environment' -WithValue 'Test'
         GivenWhiskeyYml @'
         Build:
@@ -205,11 +207,8 @@ Describe 'File.when content contains variables' {
         ThenSuccess
         ThenFile -Path 'file.txt' -Contains 'My environment is: Test'
     }
-}
 
-Describe 'File.when there is no content' {
-    It 'should create an empty file' {
-        Init
+    It 'create empty files' {
         GivenWhiskeyYml @'
         Build:
         - File:
@@ -218,11 +217,8 @@ Describe 'File.when there is no content' {
         WhenRunningTask
         ThenFile -Path 'file.txt'
     }
-}
 
-Describe 'File.when the path is missing' {
-    It 'should not create a file' {
-        Init
+    It 'validates path is mandatory' {
         GivenWhiskeyYml @'
         Build:
         - File:
@@ -232,11 +228,8 @@ Describe 'File.when the path is missing' {
         ThenTaskFailed
         ThenError -Matches 'is\ mandatory.'
     }
-}
 
-Describe 'File.when the file already exists and content is given' {
-    It 'should change the content of the file' {
-        Init
+    It 'updates file content' {
         GivenWhiskeyYml @'
         Build:
         - File:
@@ -251,11 +244,8 @@ Describe 'File.when the file already exists and content is given' {
         ThenSuccess
         ThenFile -Path 'file.txt' -Contains 'Second File... First File Overwritten'
     }
-}
 
-Describe 'File.when the path is outside root' {
-    It 'should not create the file' {
-        Init
+    It 'prevents file outside build direcory' {
         GivenWhiskeyYml @'
         Build:
         - File:
@@ -267,11 +257,8 @@ Describe 'File.when the path is outside root' {
         ThenNotFile -Path '../file.txt'
         ThenError -Matches 'outside\ the\ build\ root'
     }
-}
 
-Describe 'File.when the path does not contain a file extension' {
-    It 'should create the file' {
-        Init
+    It 'allows no file extension' {
         GivenWhiskeyYml @'
         Build:
         - File:
@@ -281,11 +268,8 @@ Describe 'File.when the path does not contain a file extension' {
         ThenSuccess
         ThenFile -Path 'file'
     }
-}
 
-Describe 'File.when a directory already exists with same path name' {
-    It 'should not create the file'{
-        Init
+    It 'validates file can be created'{
         GivenDirectory -Path 'file.txt'
         GivenWhiskeyYml @'
         Build:
@@ -296,11 +280,8 @@ Describe 'File.when a directory already exists with same path name' {
         ThenTaskFailed
         ThenError -Matches 'Path '{0}' is a directory but must be a file.'
     }
-}
 
-Describe 'File.when a subdirectory in the path does not exist' {
-    It 'should create the full path' {
-        Init
+    It 'creates file containers' {
         GivenWhiskeyYml @'
         Build:
         - File:
@@ -311,11 +292,8 @@ Describe 'File.when a subdirectory in the path does not exist' {
         ThenSuccess
         ThenFile -Path 'notreal\stillnotreal\file.txt' -Contains 'I am real.'
     }
-}
 
-Describe 'File.when multiple files are given.' {
-    It 'should create all the files.' {
-        Init
+    It 'creates multiple files' {
         GivenWhiskeyYml @'
         Build:
         - File:
@@ -331,11 +309,8 @@ Describe 'File.when multiple files are given.' {
         ThenFile -Path 'file2.txt' -Contains 'file'
         ThenFile -Path 'file3.txt' -Contains 'file'
     }
-}
 
-Describe 'File.when Touch specified and file exists' {
-    It 'should update the last write time and not change content' {
-        Init
+    It 'touches file metadata' {
         GivenFile -Path 'file.txt' -Contains 'This is a file.'
         $currentDate = Get-Date
         Start-Sleep 1
@@ -350,11 +325,8 @@ Describe 'File.when Touch specified and file exists' {
         ThenLastModified -Path 'file.txt' -After $currentDate
         ThenFile -Path 'file.txt' -Contains 'This is a file.'
     }
-}
- 
-Describe 'File.when multiple files are given and Touch is true.' {
-    It 'should update the last write time of all the files.' {
-        Init
+
+    It 'touches file metadata for multiple files' {
         GivenFile -Path 'file.txt'
         GivenFile -Path 'file2.txt'
         GivenFile -Path 'file3.txt'
@@ -375,11 +347,8 @@ Describe 'File.when multiple files are given and Touch is true.' {
         ThenLastModified -Path 'file2.txt' -After $currentDate
         ThenLastModified -Path 'file3.txt' -After $currentDate
     }
-}
 
-Describe 'File.when already existing paths are given with no content or touch' {
-    It 'should do nothing' {
-        Init
+    It 'does nothing' {
         GivenFile -Path 'abc.yml'
         GivenFile -Path 'def.yml'
         GivenWhiskeyYml @'
