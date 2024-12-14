@@ -517,35 +517,6 @@ Build:
         ThenArchiveShouldInclude 'dir/my.json','dir/yours.json'
     }
 
-    It 'sandboxes absolute output path' {
-        GivenARepositoryWithItems 'dir\my.json', 'dir\yours.json'
-        $systemRoot = 'C:\Windows\system32\'
-        if( -not $IsWindows )
-        {
-            $systemRoot = '/sbin/'
-        }
-        WhenPackaging @"
-Build:
-- Zip:
-    ArchivePath: $($systemRoot)Zip.zip
-    Path: dir
-    Include: "*.json"
-"@ -ErrorAction SilentlyContinue
-        ThenTaskFails 'outside the build root'
-    }
-
-    It 'sandboxes relative output path' {
-        GivenARepositoryWithItems 'dir\my.json', 'dir\yours.json'
-        WhenPackaging @'
-Build:
-- Zip:
-    ArchivePath: ..\..\..\Zip.zip
-    Path: dir
-    Include: "*.json"
-'@ -ErrorAction SilentlyContinue
-        ThenTaskFails 'outside the build root'
-    }
-
     It 'creates destination directory' {
         GivenARepositoryWithItems 'dir\my.json', 'dir\yours.json'
         WhenPackaging @'

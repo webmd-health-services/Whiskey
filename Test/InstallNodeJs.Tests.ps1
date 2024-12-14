@@ -397,19 +397,6 @@ Describe 'InstallNodeJs' {
         ThenNode -Installed -To 'mynode'
     }
 
-    It 'disallows installing outside build root' {
-        $installDir = Join-Path -Path ([IO.Path]::GetTempPath()) -ChildPath ([IO.Path]::GetRandomFileName())
-        try
-        {
-            { WhenInstallingNode -Path $installDir } |
-                Should -Throw -ExpectedMessage '*outside the build root*'
-        }
-        finally
-        {
-            Remove-Item -Path $installDir -Recurse -Force -ErrorAction Ignore
-        }
-    }
-
     It 'fails to download old version' {
         $oldVersion = '4.4.7'
         if ((Test-Path -Path 'variable:IsWindows') -and -not $IsWindows)

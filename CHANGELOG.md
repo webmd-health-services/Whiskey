@@ -185,7 +185,8 @@ Build:
 
 ### Changed
 
-The `InstallNode` task renamed to `InstallNodeJs`.
+* The `InstallNode` task renamed to `InstallNodeJs`.
+* Paths passed to build tasks can now be outside the build directory.
 
 ### Deprecated
 

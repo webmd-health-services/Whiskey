@@ -6,7 +6,10 @@ BeforeAll {
 
     & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-    Import-WhiskeyTestTaskModule -Name 'Glob'
+    Import-WhiskeyTestTaskModule
+    # Load the module so that its assembly gets loaded otherwise Pester can't delete the test drive because Whiskey
+    # loads the Glob module from the test drive.
+    Import-Module  -Name (Join-Path -Path $PSScriptRoot -ChildPath '..\PSModules\Glob' -Resolve)
 
     [Whiskey.Context]$script:context = $null
     $script:fsCaseSensitive = $false
@@ -130,7 +133,7 @@ BeforeAll {
             [String]$BuildRoot = $script:testRoot
         )
 
-        $script:context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $BuildRoot -IncludePSModule 'Glob'
+        $script:context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $BuildRoot
         $script:context.PipelineName = 'Build'
         $script:context.TaskIndex = 1
 
@@ -249,18 +252,6 @@ Describe 'Resolve-WhiskeyTaskPath' {
         ThenTaskNotCalled
     }
 
-    It 'allows paths outside the build directory' {
-        WhenRunningTask 'ValidateMandatoryNonexistentOutsideBuildRootFileTask' -Parameter @{ 'Path' = '..\YOLO.yml' }
-        ThenTaskCalled -WithParameter @{ 'Path' = (Join-Path -Path '..' -ChildPath 'YOLO.yml') }
-        ThenPipelineSucceeded
-    }
-
-    It 'validates paths are under build directory' {
-        WhenRunningTask 'ValidateMandatoryNonexistentFileTask' -Parameter @{ 'Path' = '../YOLO.yml' } -ErrorAction SilentlyContinue
-        ThenTaskNotCalled
-        ThenThrewException 'outside\ the\ build\ root'
-    }
-
     It 'resolves mandatory file that exists to a relative path' {
         GivenFile 'abc.yml'
         WhenRunningTask 'ValidateMandatoryFileTask' -Parameter @{ 'Path' = 'abc.yml' }
@@ -284,15 +275,6 @@ Describe 'Resolve-WhiskeyTaskPath' {
         WhenRunningTask 'ValidateMandatoryNonexistentFileTask' -Parameter @{ 'Path' = 'packages\tool\*.yolo' } #-ErrorAction SilentlyContinue
         ThenTaskCalled -WithParameter @{ 'Path' = '' }
         ThenPipelineSucceeded
-    }
-
-    It 'rejects paths outside the build directory' {
-        WhenRunningTask -Name 'ValidateMandatoryNonexistentFileTask' `
-                        -Parameter @{ 'Path' = ('..\' + (Split-Path -Path $script:testRoot -Leaf) + '!\abc.yml') } `
-                        -BuildRoot ($script:testRoot + '///') `
-                        -ErrorAction SilentlyContinue
-        ThenTaskNotCalled
-        ThenThrewException -Pattern 'outside\ the\ build\ root'
     }
 
     It 'resolves multiple items with wildcards to relative paths' {
@@ -327,45 +309,6 @@ Describe 'Resolve-WhiskeyTaskPath' {
         $taskParameters['Path'] | Should -Contain (Resolve-RelativePath 'xyz.yml')
         $taskParameters['Path'] | Should -Contain (Resolve-RelativePath 'hjk.yml')
         ThenPipelineSucceeded
-    }
-
-    It 'prevents paths from using a different case to reach outside the build directory' {
-        # Make sure we're in a directory that has letters.
-        $buildRoot = Join-Path -Path $script:testRoot -ChildPath 'fubar'
-        GivenDirectory $buildRoot
-        $tempDir = $buildRoot | Split-Path -Parent
-        $buildDirName = $buildRoot | Split-Path -Leaf
-        $attackersBuildDirName = $buildDirName.ToUpper()
-        $attackersBuildDir = Join-Path -Path $tempDir -ChildPath $attackersBuildDirName
-        $whiskeyYmlFile = JOin-Path -Path $buildRoot -ChildPath 'whiskey.yml'
-        GivenFile $whiskeyYmlFile
-        $attackersFile = Join-Path -Path $attackersBuildDir -ChildPath 'abc.yml'
-        GivenFile $attackersFile
-        $optionalParam = @{}
-        if( $script:fsCaseSensitive )
-        {
-            $optionalParam['ErrorAction'] = 'SilentlyContinue'
-        }
-        WhenRunningTask 'ValidateOptionalNonexistentPathTask' `
-                        -Parameter @{ 'Path' = ('..\{0}\abc.yml' -f $attackersBuildDirName) } `
-                        @optionalParam `
-                        -BuildRoot $buildRoot
-        if( $script:fsCaseSensitive )
-        {
-            ThenTaskNotCalled
-            ThenThrewException -Pattern 'outside\ the\ build\ root'
-        }
-        else
-        {
-            ThenTaskCalled -WithParameter @{ 'Path' = (Resolve-RelativePath 'abc.yml') }
-            ThenPipelineSucceeded
-        }
-    }
-
-    It 'allows paths that are outside working directory and still in build directory' {
-        GivenDirectory 'subdir'
-        WhenRunningTask 'ValidateOptionalNonExistentPathTask' -Parameter @{ 'Path' = '..\NewFile.txt'; 'WorkingDirectory' = 'subdir' }
-        ThenTaskCalled -WithParameter @{ 'Path' = (Resolve-RelativePath '..\Newfile.txt') }
     }
 
     It 'creates files' {
@@ -471,7 +414,6 @@ Describe 'Resolve-WhiskeyTaskPath' {
     # This detection needs to handle when resolving paths from the root directory.
     Context 'globbing in the root directory' {
         AfterEach {
-            Reset
             if( -not $IsWindows )
             {
                 sudo chmod o-w /
@@ -505,10 +447,14 @@ Describe 'Resolve-WhiskeyTaskPath' {
                         ForEach-Object { '**\{0}\**' -f $_.Name }
 
                 $context = New-WhiskeyTestContext -ForBuildServer -ForBuildRoot $script:testRoot
+
                 $context.BuildRoot = $rootPath
-                $resolvedPaths =
-                    $changedCasePaths |
-                    Resolve-WhiskeyTaskPath -TaskContext $context -UseGlob -PropertyName 'Path' -Exclude $exclude -ErrorAction Ignore
+                $resolvedPaths = $changedCasePaths | Resolve-WhiskeyTaskPath -TaskContext $context `
+                                                                             -UseGlob `
+                                                                             -PropertyName 'Path' `
+                                                                             -Exclude $exclude `
+                                                                             -ErrorAction Ignore
+
                 $expectedPaths = & {
                     foreach( $changedCasePath in $changedCasePaths )
                     {

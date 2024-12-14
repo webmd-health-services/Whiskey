@@ -245,19 +245,6 @@ Describe 'File' {
         ThenFile -Path 'file.txt' -Contains 'Second File... First File Overwritten'
     }
 
-    It 'prevents file outside build direcory' {
-        GivenWhiskeyYml @'
-        Build:
-        - File:
-            Path: ../file.txt
-            Content: 'File above root.'
-'@
-        WhenRunningTask -ErrorAction SilentlyContinue
-        ThenTaskFailed
-        ThenNotFile -Path '../file.txt'
-        ThenError -Matches 'outside\ the\ build\ root'
-    }
-
     It 'allows no file extension' {
         GivenWhiskeyYml @'
         Build:

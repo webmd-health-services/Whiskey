@@ -9,8 +9,6 @@ function Resolve-WhiskeyTaskPath
     The `Resolve-WhiskeyTaskPath` function validates and resolves paths provided by users to actual paths. It:
 
     * ensures the paths exist (use the `AllowNonexistent` switch to allow paths that don't exist).
-    * ensures the paths exist under the build root (use the `AllowOutsideBuildRoot` switch to allow paths to escape the
-      build root).
     * can ensure the user provides at least one value (use the `Mandatory` switch).
     * can ensure the user only provides one path or one path that resolves to a single path (use the `OnlySinglePath`
       switch).
@@ -21,7 +19,7 @@ function Resolve-WhiskeyTaskPath
 
     Wildcards are accepted for all paths and are resolved to actual paths.
 
-    Paths are resolved relative to the current working directory, which for a Whiskey task is the build root.
+    Paths are resolved relative to the current working directory, which for a Whiskey task is the build directory.
 
     You must pass the name of the property whose path you're resolving to the `ProperytName` parameter. This is so
     Whiskey can write friendly error messages to the user.
@@ -74,12 +72,6 @@ function Resolve-WhiskeyTaskPath
     Demonstrates how to get Whiskey to create any non-existent items whose path the user passes. In this example,
     Whiskey will create files. To create directories, pass `Directory` to the PathType parameter. You *must* use
     `Create`, `AllowNonexistent`, and `PathType` parameters together.
-
-    .EXAMPLE
-    $path | Resolve-WhiskeyTaskPath -TaskContext $context -PropertyName 'Path' -AllowOutsideBuildRoot
-
-    Demonstrates how to allow the user to pass paths to items that are outside the build root. Be very careful using
-    this switch as it could allow attackers to use your task to do nefarious things to servers.
     #>
     [CmdletBinding(DefaultParameterSetName='FromParameters')]
     param(
@@ -126,15 +118,12 @@ function Resolve-WhiskeyTaskPath
         [switch]$AllowNonexistent,
 
         [Parameter(ParameterSetName='FromParameters')]
-        # Allow the path to point to something outside the build root.
-        [switch]$AllowOutsideBuildRoot,
-
-        [Parameter(ParameterSetName='FromParameters')]
         # Create the path if it doesn't exist. Requires the `PathType` parameter.
         [switch]$Create,
 
         [Parameter(Mandatory,ParameterSetName='FromParametersUsingGlob')]
-        # Whether or not to use glob syntax to find files. Install and uses the [Glob](https://www.powershellgallery.com/packages/Glob) PowerShell module to perform the search.
+        # Whether or not to use glob syntax to find files. Install and uses the
+        # [Glob](https://www.powershellgallery.com/packages/Glob) PowerShell module to perform the search.
         [switch]$UseGlob,
 
         [Parameter(ParameterSetName='FromParametersUsingGlob')]
@@ -156,7 +145,6 @@ function Resolve-WhiskeyTaskPath
                 $PathType = $ValidatePathAttribute.PathType
             }
             $AllowNonexistent = $ValidatePathAttribute.AllowNonexistent
-            $AllowOutsideBuildRoot = $ValidatePathAttribute.AllowOutsideBuildRoot
             $Create = $ValidatePathAttribute.Create
             $UseGlob = $ValidatePathAttribute.UseGlob
             if( $ValidatePathAttribute.GlobExcludeParameter )
@@ -329,32 +317,6 @@ function Resolve-WhiskeyTaskPath
                 # If it contains a wildcard, it didn't resolve to anything, so don't return it.
                 if( [wildcardpattern]::ContainsWildcardCharacters($resolvedPaths) )
                 {
-                    return
-                }
-            }
-
-            if( -not $AllowOutsideBuildRoot )
-            {
-                $fsCaseSensitive = -not (Test-Path -Path ($TaskContext.BuildRoot.FullName.ToUpperInvariant()))
-                $comparer = [System.StringComparison]::OrdinalIgnoreCase
-                if( $fsCaseSensitive )
-                {
-                    $comparer = [System.StringComparison]::Ordinal
-                }
-
-                $normalizedBuildRoot = $TaskContext.BuildRoot.FullName.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
-                $normalizedBuildRoot = '{0}{1}' -f $normalizedBuildRoot,[IO.Path]::DirectorySeparatorChar
-
-                $invalidPaths =
-                    $resolvedPaths |
-                    Where-Object { -not ( $_.StartsWith($normalizedBuildRoot, $comparer) ) } |
-                    # What if the user supplies '.' for the current directory?
-                    Where-Object { ('{0}{1}' -f $_,[IO.Path]::DirectorySeparatorChar) -ne $normalizedBuildRoot }
-
-                if( $invalidPaths )
-                {
-                    Stop-WhiskeyTask -TaskContext $TaskContext `
-                                    -Message ('{0}[{1}] "{2}" is outside the build root "{3}".' -f $PropertyName,$pathIdx,$Path,$TaskContext.BuildRoot)
                     return
                 }
             }

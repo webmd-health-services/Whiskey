@@ -6,6 +6,7 @@ namespace Whiskey.Tasks
     {
         public bool AllowNonexistent { get; set; }
 
+        [Obsolete]
         public bool AllowOutsideBuildRoot { get; set; }
 
         public bool Create { get; set; }

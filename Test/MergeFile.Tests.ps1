@@ -213,12 +213,6 @@ Describe 'MergeFile' {
         ThenFile 'merged.txt' -HasContent 'snafu'
     }
 
-    It 'sandboxes destination file' {
-        GivenFile 'one.txt' -WithContent 'failed!'
-        WhenMerging 'one.txt' -Into '..\somefile.txt' -ErrorAction SilentlyContinue
-        ThenFailed -WithError 'is\ outside\ the\ build\ root'
-    }
-
     It 'deletes source files' {
         GivenFile 'one.txt' -WithContent 'one'
         GivenFile 'two.txt' -WithContent 'two'
