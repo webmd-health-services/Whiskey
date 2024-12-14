@@ -37,7 +37,8 @@ function Install-WhiskeyPowerShellModule
         # Modules are saved into a PSModules directory. This is the directory where PSModules directory should created, *not* the path to the PSModules directory itself, i.e. this is the path to the "PSModules" directory's parent directory.
         [String]$BuildRoot,
 
-        # The path to a custom directory where you want the module installed. The default is `PSModules` in the build root.
+        # The path to a custom directory where you want the module installed. The default is `PSModules` in the build
+        # directory.
         [String]$Path,
 
         # Don't import the module.

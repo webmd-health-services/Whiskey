@@ -6,11 +6,15 @@ function Invoke-WhiskeyNpmCommand
     Runs `npm` with given command and argument.
 
     .DESCRIPTION
-    The `Invoke-WhiskeyNpmCommand` function runs `npm` commands in the current workding directory. Pass the path to the build root to the `BuildRootPath` parameter. The function will use the copy of Node and NPM installed in the `.node`  directory in the build root.
+    The `Invoke-WhiskeyNpmCommand` function runs `npm` commands in the current workding directory. Pass the path to the
+    build directory to the `BuildRootPath` parameter. The function will use the copy of Node and NPM installed in the
+    `.node`  directory in the build directory.
 
-    Pass the name of the NPM command to run with the `Name` parameter. Pass any arguments to pass to the command with the `ArgumentList`.
+    Pass the name of the NPM command to run with the `Name` parameter. Pass any arguments to pass to the command with
+    the `ArgumentList`.
 
-    Task authors should add the `RequiresTool` attribute to their task functions to ensure that Whiskey installs Node and NPM, e.g.
+    Task authors should add the `RequiresTool` attribute to their task functions to ensure that Whiskey installs Node
+    and NPM, e.g.
 
         function MyTask
         {

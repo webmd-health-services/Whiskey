@@ -31,7 +31,7 @@ function GivenNodeModuleInstalled
     }
 
     $nodeModulesPath = Join-Path -Path $nodeModulesPath -ChildPath 'node_modules'
-        
+
     $modulePath = Join-Path -Path $nodeModulesPath -ChildPath $Name
     New-Item -Path $modulePath -ItemType 'Directory' -Force
 }
@@ -122,7 +122,7 @@ function WhenResolving
     }
 }
 
-Describe 'Resolve-WhiskeyNodeModulePath.when resolving from build root' {
+Describe 'Resolve-WhiskeyNodeModulePath.when resolving from build directory' {
     try
     {
         Init
@@ -136,7 +136,7 @@ Describe 'Resolve-WhiskeyNodeModulePath.when resolving from build root' {
     }
 }
 
-Describe 'Resolve-WhiskeyNodeModulePath.when resolving global node modules directory from build root' {
+Describe 'Resolve-WhiskeyNodeModulePath.when resolving global node modules directory from build directory' {
     try
     {
         Init
@@ -165,7 +165,7 @@ Describe 'Resolve-WhiskeyNodeModulePath.when resolving from a Node root' {
 }
 
 
-Describe 'Resolve-WhiskeyNodeModulePath.when resolving from a relative build root' {
+Describe 'Resolve-WhiskeyNodeModulePath.when resolving from a relative build directory' {
     Push-Location $TestDrive.FullName
     try
     {
@@ -211,7 +211,7 @@ Describe 'Resolve-WhiskeyNodeModulePath.when Node doesn''t exist in Node root' {
     }
 }
 
-Describe 'Resolve-WhiskeyNodeModulePath.when Node doesn''t exist in build root' {
+Describe 'Resolve-WhiskeyNodeModulePath.when Node doesn''t exist in build directory' {
     try
     {
         Init

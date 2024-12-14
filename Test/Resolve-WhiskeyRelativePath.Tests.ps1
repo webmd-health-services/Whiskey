@@ -87,7 +87,7 @@ function WhenResolving
     }
 }
 
-Describe 'Resolve-WhiskeyRelativePath.when current directory is build root and path does not exist' {
+Describe 'Resolve-WhiskeyRelativePath.when current directory is build directory and path does not exist' {
     It 'should return relative path' {
         Init
         WhenResolving @($script:testRoot, 'dir1','dir2','dir3','dir4') -In '.'
@@ -95,7 +95,7 @@ Describe 'Resolve-WhiskeyRelativePath.when current directory is build root and p
     }
 }
 
-Describe 'Resolve-WhiskeyRelativePath.when current directory is not build root and path does not exist' {
+Describe 'Resolve-WhiskeyRelativePath.when current directory is not build directory and path does not exist' {
     It 'should return absolute path' {
         Init
         GivenDirectory 'dir5\dir6'
@@ -104,16 +104,16 @@ Describe 'Resolve-WhiskeyRelativePath.when current directory is not build root a
     }
 }
 
-Describe 'Resolve-WhiskeyRelativePath.when resolving relative path from build root' {
-    It 'should return path relative to build root' {
+Describe 'Resolve-WhiskeyRelativePath.when resolving relative path from build directory' {
+    It 'should return path relative to build directory' {
         Init
         WhenResolving @('dir9', 'dir10') -In '.'
         ThenPathIs @('.', 'dir9', 'dir10')
     }
 }
 
-Describe 'Resolve-WhiskeyRelativePath.when resolving relative path from outside build root' {
-    It 'should return path relative to build root' {
+Describe 'Resolve-WhiskeyRelativePath.when resolving relative path from outside build directory' {
+    It 'should return path relative to build directory' {
         Init
         WhenResolving @('dir11', 'dir12')
         ThenPathIs @($script:testRoot, 'dir11', 'dir12')

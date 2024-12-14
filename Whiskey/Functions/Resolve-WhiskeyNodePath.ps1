@@ -6,16 +6,20 @@ function Resolve-WhiskeyNodePath
     Gets the path to the Node executable.
 
     .DESCRIPTION
-    The `Resolve-WhiskeyNodePath` resolves the path to the Node executable in a cross-platform manner. The path/name of the Node executable is different on different operating systems. Pass the path to the root directory where Node is installed to the `NodeRootPath` parameter.
+    The `Resolve-WhiskeyNodePath` resolves the path to the Node executable in a cross-platform manner. The path/name of
+    the Node executable is different on different operating systems. Pass the path to the root directory where Node is
+    installed to the `NodeRootPath` parameter.
 
-    If you want the path to the local version of Node that Whiskey installs for tasks that need it, pass the build root path to the `BuildRootPath` parameter.
+    If you want the path to the local version of Node that Whiskey installs for tasks that need it, pass the build
+    directory path to the `BuildRootPath` parameter.
 
     Returns the full path to the Node executable. If one isn't found, writes an error and returns nothing.
 
     .EXAMPLE
     Resolve-WhiskeyNodePath -NodeRootPath $pathToNodeInstallRoot
 
-    Demonstrates how to get the path to the Node executable when the path to the root Node directory is in the `$pathToInstallRoot` variable.
+    Demonstrates how to get the path to the Node executable when the path to the root Node directory is in the
+    `$pathToInstallRoot` variable.
 
     .EXAMPLE
     Resolve-WhiskeyNodePath -BuildRootPath $TaskContext.BuildRoot
@@ -25,7 +29,7 @@ function Resolve-WhiskeyNodePath
     [CmdletBinding()]
     param(
         [Parameter(Mandatory,ParameterSetName='FromBuildRoot')]
-        # The path to the build root. This will return the path to Node where Whiskey installs a local copy.
+        # The path to the build directory. This will return the path to Node where Whiskey installs a local copy.
         [String]$BuildRootPath,
 
         [Parameter(Mandatory,ParameterSetName='FromNodeRoot')]

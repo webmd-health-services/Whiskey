@@ -8,26 +8,26 @@ function Import-WhiskeyPowerShellModule
     .DESCRIPTION
     The `Import-WhiskeyPowerShellModule` function imports a PowerShell module that is needed/used by a Whiskey task.
     Since Whiskey tasks all run in the module's scope, the imported modules are imported into the global scope. If the
-    module is currently loaded but is at a different version than requested, that module is removed first, and the 
+    module is currently loaded but is at a different version than requested, that module is removed first, and the
     correct version is imported.
 
     If the module isn't installed (or if the requested version of the module isn't installed), you'll get an error. Use
-    the `Install-WhiskeyPowerShellModule` to install the module. If a task needs a module, use the 
+    the `Install-WhiskeyPowerShellModule` to install the module. If a task needs a module, use the
     `[Whiskey.RequiresPowerShellModule]` task attribute.
 
     .EXAMPLE
     Import-WhiskeyPowerShellModule -Name 'Zip' -PSModulesRoot $buildRoot
 
-    Demonstrates how to use this method to import a module that is installed in a global module location or in the 
-    current build's PSModules directory (usually in the build root directory). The latest/newest installed version is
+    Demonstrates how to use this method to import a module that is installed in a global module location or in the
+    current build's PSModules directory (usually in the build directory). The latest/newest installed version is
     imported.
 
     .EXAMPLE
     Import-WhiskeyPowerShellModule -Name 'Zip' -Version '0.2.0' -PSModulesRoot $buildRoot
 
-    Demonstrates how to use this method to import a specific version of a module that is installed in a global module 
-    location or in the current build's PSModules directory (usually in the build root directory). The latest/newest
-    installed version is imported.
+    Demonstrates how to use this method to import a specific version of a module that is installed in a global module
+    location or in the current build's PSModules directory (usually in the build directory). The latest/newest installed
+    version is imported.
     #>
     [CmdletBinding()]
     param(
@@ -38,7 +38,8 @@ function Import-WhiskeyPowerShellModule
         # The version of the module to import.
         [String] $Version,
 
-        # The path to the build root, where the PSModules directory can be found. Must be included to import a locally installed module.
+        # The path to the build directory, where the PSModules directory can be found. Must be included to import a
+        # locally installed module.
         [Parameter(Mandatory)]
         [String] $PSModulesRoot
     )
@@ -75,7 +76,7 @@ function Import-WhiskeyPowerShellModule
     }
     finally
     {
-        # Some modules (...cough...PowerShellGet...cough...) write silent errors during import. This causes our 
+        # Some modules (...cough...PowerShellGet...cough...) write silent errors during import. This causes our
         # tests to fail. I know this is a little extreme.
         $numToRemove = $Global:Error.Count - $numErrorsBefore
         for( $idx = 0; $idx -lt $numToRemove; $idx++ )
