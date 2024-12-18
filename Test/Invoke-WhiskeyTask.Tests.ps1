@@ -1268,5 +1268,10 @@ Describe 'Invoke-WhiskeyTask' {
         $outputFilePath | Should -Exist
         Get-Content -Path $outputFilePath | Should -Be 'Hello, World 2! '
     }
+
+    It 'resolves variables after evaluating condition' {
+        WhenRunningTask 'Log' -Parameter @{ Message = '$(I_DO_NOT_EXIST)' ; '.IfExists' = 'env:FUBAR_SNAFU' }
+        ThenPipelineSucceeded
+    }
 }
 

@@ -6,21 +6,32 @@ function Resolve-WhiskeyVariable
     Replaces any variables in a string to their values.
 
     .DESCRIPTION
-    The `Resolve-WhiskeyVariable` function replaces any variables in strings, arrays, or hashtables with their values. Variables have the format `$(VARIABLE_NAME)`. Variables are expanded in each item of an array. Variables are expanded in each value of a hashtable. If an array or hashtable contains an array or hashtable, variables are expanded in those objects as well, i.e. `Resolve-WhiskeyVariable` recursivelye expands variables in all arrays and hashtables.
+    The `Resolve-WhiskeyVariable` function replaces any variables in strings, arrays, or hashtables with their values.
+    Variables have the format `$(VARIABLE_NAME)`. Variables are expanded in each item of an array. Variables are
+    expanded in each value of a hashtable. If an array or hashtable contains an array or hashtable, variables are
+    expanded in those objects as well, i.e. `Resolve-WhiskeyVariable` recursivelye expands variables in all arrays and
+    hashtables.
 
-    You can add variables to replace via the `Add-WhiskeyVariable` function. If a variable doesn't exist, environment variables are used. If a variable has the same name as an environment variable, the variable value is used instead of the environment variable's value. If no variable or environment variable is found, `Resolve-WhiskeyVariable` will write an error and return the origin string.
+    You can add variables to replace via the `Add-WhiskeyVariable` function. If a variable doesn't exist, environment
+    variables are used. If a variable has the same name as an environment variable, the variable value is used instead
+    of the environment variable's value. If no variable or environment variable is found, `Resolve-WhiskeyVariable` will
+    write an error and return the origin string.
 
-    See the [Variables](https://github.com/webmd-health-services/Whiskey/wiki/Variables) page on the [Whiskey wiki](https://github.com/webmd-health-services/Whiskey/wiki) for a list of variables.
+    See the [Variables](https://github.com/webmd-health-services/Whiskey/wiki/Variables) page on the [Whiskey
+    wiki](https://github.com/webmd-health-services/Whiskey/wiki) for a list of variables.
 
     .EXAMPLE
     '$(COMPUTERNAME)' | Resolve-WhiskeyVariable
 
-    Demonstrates that you can use environment variable as variables. In this case, `Resolve-WhiskeyVariable` would return the name of the current computer.
+    Demonstrates that you can use environment variable as variables. In this case, `Resolve-WhiskeyVariable` would
+    return the name of the current computer.
 
     .EXAMPLE
     @( '$(VARIABLE)', 4, @{ 'Key' = '$(VARIABLE') } ) | Resolve-WhiskeyVariable
 
-    Demonstrates how to replace all the variables in an array. Any value of the array that isn't a string is ignored. Any hashtable in the array will have any variables in its values replaced. In this example, if the value of `VARIABLE` is 'Whiskey`, `Resolve-WhiskeyVariable` would return:
+    Demonstrates how to replace all the variables in an array. Any value of the array that isn't a string is ignored.
+    Any hashtable in the array will have any variables in its values replaced. In this example, if the value of
+    `VARIABLE` is 'Whiskey`, `Resolve-WhiskeyVariable` would return:
 
         @(
             'Whiskey',
@@ -33,7 +44,8 @@ function Resolve-WhiskeyVariable
     .EXAMPLE
     @{ 'Key' = '$(Variable)'; 'Array' = @( '$(VARIABLE)', 4 ) 'Integer' = 4; } | Resolve-WhiskeyVariable
 
-    Demonstrates that `Resolve-WhiskeyVariable` searches hashtable values and replaces any variables in any strings it finds. If the value of `VARIABLE` is set to `Whiskey`, then the code in this example would return:
+    Demonstrates that `Resolve-WhiskeyVariable` searches hashtable values and replaces any variables in any strings it
+    finds. If the value of `VARIABLE` is set to `Whiskey`, then the code in this example would return:
 
         @{
             'Key' = 'Whiskey';
@@ -48,13 +60,15 @@ function Resolve-WhiskeyVariable
     param(
         [Parameter(Mandatory,ValueFromPipeline,ParameterSetName='ByPipeline')]
         [AllowNull()]
-        # The object on which to perform variable replacement/substitution. If the value is a string, all variables in the string are replaced with their values.
+        # The object on which to perform variable replacement/substitution. If the value is a string, all variables in
+        # the string are replaced with their values.
         #
         # If the value is an array, variable expansion is done on each item in the array.
         #
         # If the value is a hashtable, variable replcement is done on each value of the hashtable.
         #
-        # Variable expansion is performed on any arrays and hashtables found in other arrays and hashtables, i.e. arrays and hashtables are searched recursively.
+        # Variable expansion is performed on any arrays and hashtables found in other arrays and hashtables, i.e. arrays
+        # and hashtables are searched recursively.
         [Object]$InputObject,
 
         [Parameter(ParameterSetName='ByName')]
@@ -63,7 +77,15 @@ function Resolve-WhiskeyVariable
 
         [Parameter(Mandatory)]
         # The context of the current build. Necessary to lookup any variables.
-        [Whiskey.Context]$Context
+        [Whiskey.Context]$Context,
+
+        # If the input object is a hashtable, only replace values on properties that are included in this list. The
+        # default is to do variable replacement on all values.
+        [String[]] $Include,
+
+        # If the input object is a hashtable, replace values on properties except those in this list. The default is to
+        # do variable replacement on all values.
+        [String[]] $Exclude
     )
 
     begin
@@ -141,6 +163,16 @@ function Resolve-WhiskeyVariable
             # Can't modify a collection while enumerating it.
             foreach( $key in $InputObject.Keys )
             {
+                if ($Include -and $key -notin $Include)
+                {
+                    continue
+                }
+
+                if ($Exclude -and $key -in $Exclude)
+                {
+                    continue
+                }
+
                 $newKey = $key | Resolve-WhiskeyVariable -Context $Context
                 if( $newKey -ne $key )
                 {
