@@ -12,7 +12,7 @@ function Uninstall-WhiskeyTool
     `.dotnet` directory.
 
     When uninstalling a Node module, its name should be prefixed with `NodeModule::`, e.g. `NodeModule::rimraf`.
-    
+
     Users of the `Whiskey` API typcially won't need to use this function. It is called by other `Whiskey` function so
     they have the tools they need.
 
@@ -20,19 +20,19 @@ function Uninstall-WhiskeyTool
     Uninstall-WhiskeyTool -ModuleName 'Pester'
 
     Demonstrates how to remove the `Pester` module from the default location.
-        
+
     .EXAMPLE
     Uninstall-WhiskeyTool -NugetPackageName 'NUnit.Runners' -Version '2.6.4'
 
     Demonstrates how to uninstall a specific NuGet Package. In this case, NUnit Runners version 2.6.4 would be removed
-    from the default location. 
+    from the default location.
 
     .EXAMPLE
     Uninstall-WhiskeyTool -ModuleName 'Pester' -Path $forPath
 
     Demonstrates how to remove a Pester module from a specified path location other than the default location. In this
     case, Pester would be removed from the directory pointed to by the $forPath variable.
-    
+
     .EXAMPLE
     Uninstall-WhiskeyTool -ModuleName 'Pester' -DownloadRoot $Root
 
@@ -42,18 +42,18 @@ function Uninstall-WhiskeyTool
     .EXAMPLE
     Uninstall-WhiskeyTool -Name 'Node' -BuildRoot $TaskContext.BuildRoot
 
-    Demonstrates how to uninstall Node from the `.node` directory in your build root.
+    Demonstrates how to uninstall Node from the `.node` directory in your build directory.
 
     .EXAMPLE
     Uninstall-WhiskeyTool -Name 'NodeModule::rimraf' -BuildRoot $TaskContext.BuildRoot
 
     Demonstrates how to uninstall the `rimraf` Node module from the `node_modules` directory in the Node directory in
-    your build root.
+    your build directory.
 
     .EXAMPLE
     Uninstall-WhiskeyTool -Name 'DotNet' -BuildRoot $TaskContext.BuildRoot
 
-    Demonstrates how to uninstall the .NET Core SDK from the `.dotnet` directory in your build root.
+    Demonstrates how to uninstall the .NET Core SDK from the `.dotnet` directory in your build directory.
     #>
     [CmdletBinding()]
     param(
@@ -69,7 +69,7 @@ function Uninstall-WhiskeyTool
         # BUILD number.
         [String] $Version,
 
-        # The build root where the build is currently running. Tools are installed here.
+        # The build directory where the build is currently running. Tools are installed here.
         [String] $BuildRoot
     )
 
@@ -87,7 +87,7 @@ function Uninstall-WhiskeyTool
             Remove-Item -Path $nuGetRoot -Recurse -Force
         }
     }
-    
+
     if( $PSCmdlet.ParameterSetName -eq 'NuGet' )
     {
         Remove-NuGetPackage

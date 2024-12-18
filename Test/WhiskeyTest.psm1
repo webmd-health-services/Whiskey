@@ -648,7 +648,7 @@ function ThenModuleInstalled
     if( -not $InBuildRoot )
     {
         $msg = 'The InBuildRoot parameter will eventually become a required parameter on ThenModuleInstalled. Please ' +
-               'update your usages to pass in the build root.'
+               'update your usages to pass in the build directory.'
         Write-Warning -Message $msg
     }
 

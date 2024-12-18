@@ -106,14 +106,14 @@ Build:
                     - Test\Invoke-WhiskeyBuild.Tests.ps1
                     - Test\Install-WhiskeyPowerShellModule.Tests.ps1
                     - Test\Install-WhiskeyTool.Tests.ps1
+                    - Test\MergeFile.Tests.ps1
                     - Test\PowerShell.Tests.ps1
                     - Test\ProGetUniversalPackage.Tests.ps1
+                    - Test\Zip.Tests.ps1
         - Pester4:
             Script:
             - Test\GetPowerShellModule.Tests.ps1
-            - Test\MergeFile.Tests.ps1
             - Test\Find-WhiskeyPowerShellModule.Tests.ps1
-            - Test\Zip.Tests.ps1
     - Tasks:
         - Pester:
             AsJob: true
@@ -160,7 +160,6 @@ Build:
                     - "*/Test/ConvertTo-WhiskeySemanticVersion.Tests.ps1"
                     - "*/Test/CopyFile.Tests.ps1"
                     - "*/Test/Delete.Tests.ps1"
-                    - "*/Test/File.Tests.ps1"
                     - "*/Test/Get-MSBuild.Tests.ps1"
                     - "*/Test/Get-WhiskeyApiKey.Tests.ps1"
                     - "*/Test/Get-WhiskeyBuildMetadata.Tests.ps1"
@@ -183,7 +182,6 @@ Build:
                     - "*/Test/Resolve-WhiskeyNodeModulePath.Tests.ps1"
                     - "*/Test/Resolve-WhiskeyNodePath.Tests.ps1"
                     - "*/Test/Resolve-WhiskeyRelativePath.Tests.ps1"
-                    - "*/Test/Resolve-WhiskeyTaskPath.Tests.ps1"
                     - "*/Test/Set-WhiskeyBuildStatus.Tests.ps1"
                     - "*/Test/Set-WhiskeyMSBuildConfiguration.Tests.ps1"
                     - "*/Test/SetVariable.Tests.ps1"
@@ -204,7 +202,6 @@ Build:
             - "Test/ConvertTo-WhiskeySemanticVersion.Tests.ps1"
             - "Test/CopyFile.Tests.ps1"
             - "Test/Delete.Tests.ps1"
-            - "Test/File.Tests.ps1"
             - "Test/Get-MSBuild.Tests.ps1"
             - "Test/Get-WhiskeyApiKey.Tests.ps1"
             - "Test/Get-WhiskeyBuildMetadata.Tests.ps1"
@@ -227,7 +224,6 @@ Build:
             - "Test/Resolve-WhiskeyNodeModulePath.Tests.ps1"
             - "Test/Resolve-WhiskeyNodePath.Tests.ps1"
             - "Test/Resolve-WhiskeyRelativePath.Tests.ps1"
-            - "Test/Resolve-WhiskeyTaskPath.Tests.ps1"
             - "Test/Set-WhiskeyBuildStatus.Tests.ps1"
             - "Test/Set-WhiskeyMSBuildConfiguration.Tests.ps1"
             - "Test/SetVariable.Tests.ps1"
@@ -327,16 +323,16 @@ Build:
                 Run:
                     Path:
                     - Test\Version.Tests.ps1
+                    - Test\MergeFile.Tests.ps1
                     - Test\PowerShell.Tests.ps1
                     - Test\ProGetUniversalPackage.Tests.ps1
+                    - Test\Zip.Tests.ps1
         - Pester4:
             Script:
-            - Test\MergeFile.Tests.ps1
             - Test\PublishPowerShellModule.Tests.ps1
             - Test\Resolve-WhiskeyNodePath.Tests.ps1
             - Test\Find-WhiskeyPowerShellModule.Tests.ps1
             - Test\Uninstall-WhiskeyNodeModule.Tests.ps1
-            - Test\Zip.Tests.ps1
     - Tasks:
         - Pester:
             AsJob: true
@@ -384,7 +380,6 @@ Build:
                     - "*\\Test\\ConvertTo-WhiskeySemanticVersion.Tests.ps1"
                     - "*\\Test\\CopyFile.Tests.ps1"
                     - "*\\Test\\Delete.Tests.ps1"
-                    - "*\\Test\\File.Tests.ps1"
                     - "*\\Test\\Get-MSBuild.Tests.ps1"
                     - "*\\Test\\Get-WhiskeyApiKey.Tests.ps1"
                     - "*\\Test\\Get-WhiskeyBuildMetadata.Tests.ps1"
@@ -406,7 +401,6 @@ Build:
                     - "*\\Test\\Resolve-WhiskeyDotnetSdkVersion.Tests.ps1"
                     - "*\\Test\\Resolve-WhiskeyNodeModulePath.Tests.ps1"
                     - "*\\Test\\Resolve-WhiskeyRelativePath.Tests.ps1"
-                    - "*\\Test\\Resolve-WhiskeyTaskPath.Tests.ps1"
                     - "*\\Test\\Set-WhiskeyBuildStatus.Tests.ps1"
                     - "*\\Test\\Set-WhiskeyMSBuildConfiguration.Tests.ps1"
                     - "*\\Test\\SetVariable.Tests.ps1"
@@ -423,7 +417,6 @@ Build:
             - "Test\\ConvertFrom-WhiskeyContext.Tests.ps1"
             - "Test\\ConvertTo-WhiskeySemanticVersion.Tests.ps1"
             - "Test\\CopyFile.Tests.ps1"
-            - "Test\\File.Tests.ps1"
             - "Test\\Get-MSBuild.Tests.ps1"
             - "Test\\Get-WhiskeyApiKey.Tests.ps1"
             - "Test\\Get-WhiskeyBuildMetadata.Tests.ps1"
@@ -446,7 +439,6 @@ Build:
             - "Test\\Resolve-WhiskeyDotnetSdkVersion.Tests.ps1"
             - "Test\\Resolve-WhiskeyNodeModulePath.Tests.ps1"
             - "Test\\Resolve-WhiskeyRelativePath.Tests.ps1"
-            - "Test\\Resolve-WhiskeyTaskPath.Tests.ps1"
             - "Test\\Set-WhiskeyBuildStatus.Tests.ps1"
             - "Test\\Set-WhiskeyMSBuildConfiguration.Tests.ps1"
             - "Test\\SetVariable.Tests.ps1"

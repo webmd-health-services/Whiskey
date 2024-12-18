@@ -80,7 +80,7 @@ function WhenResolving
     }
 }
 
-Describe 'Resolve-WhiskeyNodePath.when resolving from build root' {
+Describe 'Resolve-WhiskeyNodePath.when resolving from build directory' {
     try
     {
         Init
@@ -109,7 +109,7 @@ Describe 'Resolve-WhiskeyNodePath.when resolving from a Node root' {
 }
 
 
-Describe 'Resolve-WhiskeyNodePath.when resolving from a relative build root' {
+Describe 'Resolve-WhiskeyNodePath.when resolving from a relative build directory' {
     Push-Location $TestDrive.FullName
     try
     {
@@ -155,7 +155,7 @@ Describe 'Resolve-WhiskeyNodePath.when Node doesn''t exist in Node root' {
     }
 }
 
-Describe 'Resolve-WhiskeyNodePath.when Node doesn''t exist in build root' {
+Describe 'Resolve-WhiskeyNodePath.when Node doesn''t exist in build directory' {
     try
     {
         Init

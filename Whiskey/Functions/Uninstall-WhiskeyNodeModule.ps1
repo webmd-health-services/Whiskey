@@ -4,23 +4,23 @@ function Uninstall-WhiskeyNodeModule
     <#
     .SYNOPSIS
     Uninstalls Node.js modules.
-    
+
     .DESCRIPTION
     The `Uninstall-WhiskeyNodeModule` function will uninstall Node.js modules from the `node_modules` directory in the current working directory. It uses the `npm uninstall` command to remove the module.
-    
+
     If the `npm uninstall` command fails to uninstall the module and the `Force` parameter was not used, then the function will write an error and return. If the `Force` parameter is used then the function will attempt to manually remove the module if `npm uninstall` fails.
-    
+
     .EXAMPLE
     Uninstall-WhiskeyNodeModule -Name 'rimraf' -NodePath $TaskParameter['NodePath']
-    
+
     Removes the node module 'rimraf' from the `node_modules` directory in the current directory.
 
     .EXAMPLE
     Uninstall-WhiskeyNodeModule -Name 'rimraf' -NodePath $TaskParameter['NodePath'] -Force
-    
+
     Removes the node module 'rimraf' from `node_modules` directory in the current directory. Because the `Force` switch is used, if `npm uninstall` fails, will attemp to use PowerShell to remove the module.
     #>
-    
+
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
@@ -28,7 +28,7 @@ function Uninstall-WhiskeyNodeModule
         [String]$Name,
 
         [Parameter(Mandatory)]
-        # The path to the build root directory.
+        # The path to the build directory.
         [String]$BuildRootPath,
 
         # Node modules are being uninstalled on a developer computer.
@@ -56,7 +56,7 @@ function Uninstall-WhiskeyNodeModule
                              -BuildRootPath $BuildRootPath `
                              -ArgumentList $argumentList `
                              -ForDeveloper:$ForDeveloper
-    
+
     $modulePath = Resolve-WhiskeyNodeModulePath -Name $Name -BuildRootPath $BuildRootPath -Global:$Global -ErrorAction Ignore
 
     if( $modulePath )

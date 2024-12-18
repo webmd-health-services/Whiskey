@@ -6,26 +6,36 @@ function Resolve-WhiskeyNodeModulePath
     Gets the path to Node module's directory.
 
     .DESCRIPTION
-    The `Resolve-WhiskeyNodeModulePath` resolves the path to a Node modules's directory. Pass the name of the module to the `Name` parameter. Pass the path to the build root to the `BuildRootPath` (this is usually where the package.json file is). The function will return the path to the Node module's directory in the local "node_modules" directory. Whiskey installs a private copy of Node for you into a ".node" directory in the build root. If you want to get the path to a global module from this private location, use the `-Global` switch.
-    
-    To get the Node module's directory from an arbitrary directory where Node is installed, pass the install directory to the `NodeRootPath` directory. This function handles the different locations of the "node_modules" directory across/between operating systems.
+    The `Resolve-WhiskeyNodeModulePath` resolves the path to a Node modules's directory. Pass the name of the module to
+    the `Name` parameter. Pass the path to the build directory to the `BuildRootPath` (this is usually where the
+    package.json file is). The function will return the path to the Node module's directory in the local "node_modules"
+    directory. Whiskey installs a private copy of Node for you into a ".node" directory in the build directory. If you
+    want to get the path to a global module from this private location, use the `-Global` switch.
+
+    To get the Node module's directory from an arbitrary directory where Node is installed, pass the install directory
+    to the `NodeRootPath` directory. This function handles the different locations of the "node_modules" directory
+    across/between operating systems.
 
     If the Node module isn't installed, you'll get an error and nothing will be returned.
 
     .EXAMPLE
     Resolve-WhiskeyNodeModulePath -Name 'npm' -NodeRootPath $pathToNodeInstallRoot
 
-    Demonstrates how to get the path to the `npm' module's directory from the "node_modules" directory from a directory where Node is installed, given by the `$pathToInstallRoot` variable.
+    Demonstrates how to get the path to the `npm' module's directory from the "node_modules" directory from a directory
+    where Node is installed, given by the `$pathToInstallRoot` variable.
 
     .EXAMPLE
     Resolve-WhiskeyNodeModulePath -Name 'npm' -BuildRootPath $TaskContext.BuildRoot
 
-    Demonstrates how to get the path to a Node module's directory where Node installs a local copy. In this case, `Join-Path -Path $TaskContext.BuildRoot -ChildPath 'node_modules\npm'` would be returned (if it exists).
+    Demonstrates how to get the path to a Node module's directory where Node installs a local copy. In this case,
+    `Join-Path -Path $TaskContext.BuildRoot -ChildPath 'node_modules\npm'` would be returned (if it exists).
 
     .EXAMPLE
     Resolve-WhiskeyNodeModulePath -Name 'npm' -BuildRootPath $TaskContext.BuildRoot -Global
 
-    Demonstrates how to get the path to a globally installed Node module's directory. Whiskey installs a private copy of Node into a ".node" directory in the build root, so this example would return a path to the module in that directory (if it exists). That path can be different between operating systems.
+    Demonstrates how to get the path to a globally installed Node module's directory. Whiskey installs a private copy of
+    Node into a ".node" directory in the build directory, so this example would return a path to the module in that
+    directory (if it exists). That path can be different between operating systems.
     #>
     [CmdletBinding()]
     param(
@@ -34,7 +44,9 @@ function Resolve-WhiskeyNodeModulePath
         [String]$Name,
 
         [Parameter(Mandatory,ParameterSetName='FromBuildRoot')]
-        # The path to the build root. This will return the path to Node modules's directory from the "node_modules" directory in the build root. If you want the path to a global node module, installed in the local Node directory Whiskey installs in the repository, use the `-Global` switch.
+        # The path to the build directory. This will return the path to Node modules's directory from the "node_modules"
+        # directory in the build directory. If you want the path to a global node module, installed in the local Node
+        # directory Whiskey installs in the repository, use the `-Global` switch.
         [String]$BuildRootPath,
 
         [Parameter(ParameterSetName='FromBuildRoot')]

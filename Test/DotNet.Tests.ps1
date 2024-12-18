@@ -250,7 +250,7 @@ Describe 'DotNet' {
         }
     }
 
-    Context 'when passing paths to the command and working directory isn''t the build root' {
+    Context 'when passing paths to the command and working directory isn''t the build directory' {
         It 'should resolve paths' {
             GivenDotNetCoreProject 'DotNetCore\DotNetCore.csproj' -Targeting 'netcoreapp2.0'
             GivenDotNetCoreProject 'DotNetCore\DotNetCore2.csproj' -Targeting 'netcoreapp2.0'
