@@ -717,7 +717,7 @@ Describe 'Invoke-WhiskeyTask' {
                     -InWorkingDirectory '.output'
     }
 
-    It 'should always install tool in the build root' {
+    It 'should always install tool in the build directory' {
         GivenRunByDeveloper
         GivenWorkingDirectory '.output'
         $script:testRoot = $script:testRoot
@@ -728,7 +728,7 @@ Describe 'Invoke-WhiskeyTask' {
                 Write-WhiskeyDebug ('Expected Path   {0}' -f $script:testRoot)
                 if( $currentPath -ne $script:testRoot )
                 {
-                    throw 'tool installation didn''t happen in the build root'
+                    throw 'tool installation didn''t happen in the build directory'
                 }
             }
         $parameter = @{ '.WorkingDirectory' = '.output' }

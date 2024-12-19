@@ -63,7 +63,7 @@ function New-WhiskeyContext
         [Parameter(Mandatory)]
         [String] $ConfigurationPath,
 
-        # The place where downloaded tools should be cached. The default is the build root.
+        # The place where downloaded tools should be cached. The default is the build directory.
         [String] $DownloadRoot
     )
 

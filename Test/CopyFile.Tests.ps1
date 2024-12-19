@@ -95,7 +95,7 @@ function ThenNothingCopied
     $destinationRoot = Get-DestinationRoot
     foreach( $item in $To )
     {
-        $fullPath = Join-Path -Path $destinationRoot -ChildPath $item 
+        $fullPath = Join-Path -Path $destinationRoot -ChildPath $item
         if( (Test-Path -Path $fullPath -PathType Container) )
         {
             Get-ChildItem -Path $fullPath | Should -BeNullOrEmpty
@@ -117,12 +117,12 @@ function ThenFilesCopied
     }
     else
     {
-        $To = $To | ForEach-Object { 
+        $To = $To | ForEach-Object {
             if( [IO.Path]::IsPathRooted($_) )
             {
                 return $_
             }
-            Join-Path -Path $testRoot -ChildPath $_ 
+            Join-Path -Path $testRoot -ChildPath $_
         }
     }
 
@@ -224,7 +224,7 @@ Describe 'CopyFile.when destination directory contains wildcards and doesn''t ex
     }
 }
 
-Describe 'CopyFile.when destination directory is an absolute path inside the build root' {
+Describe 'CopyFile.when destination directory is an absolute path inside the build directory' {
     It 'it should still copy the file' {
         Init
         GivenFiles 'file1.txt'

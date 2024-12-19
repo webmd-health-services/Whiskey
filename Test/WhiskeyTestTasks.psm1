@@ -326,17 +326,6 @@ function ValidateMandatoryNonexistentFilesTask
     $script:lastTaskBoundParameters = $PSBoundParameters
 }
 
-function ValidateMandatoryNonexistentOutsideBuildRootFileTask
-{
-    [Whiskey.Task('ValidateMandatoryNonexistentOutsideBuildRootFileTask')]
-    param(
-        [Whiskey.Tasks.ValidatePath(Mandatory,PathType='File',AllowNonexistent,AllowOutsideBuildRoot)]
-        [String]$Path
-    )
-
-    $script:lastTaskBoundParameters = $PSBoundParameters
-}
-
 function ValidateMandatoryPathTask
 {
     [Whiskey.Task('ValidateMandatoryPathTask')]
@@ -541,18 +530,6 @@ function ValidatePathWithGlobTask
     [CmdletBinding()]
     param(
         [Whiskey.Tasks.ValidatePath(UseGlob,GlobExcludeParameter='Exclude')]
-        [String[]]$Path
-    )
-
-    $script:lastTaskBoundParameters = $PSBoundParameters
-}
-
-function ValidatePathWithGlobOutsideBuildRootTask
-{
-    [Whiskey.Task('ValidatePathWithGlobOutsideBuildRootTask')]
-    [CmdletBinding()]
-    param(
-        [Whiskey.Tasks.ValidatePath(UseGlob,GlobExcludeParameter='Exclude',AllowOutsideBuildRoot)]
         [String[]]$Path
     )
 

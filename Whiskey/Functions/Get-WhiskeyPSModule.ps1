@@ -8,13 +8,14 @@ function Get-WhiskeyPSModule
     .DESCRIPTION
     The `Get-WhiskeyPSModule` function return a PowerShell module information object for a module. It returns the same
     object returned by PowerShell's `Get-Module` cmdlet. Pass the name of the module to the `Name` parameter. Pass the
-    path to the directory that contains Whiskey's "PSModules" directory (this is usually the build root). The function
-    uses `Get-Module` to find the requested module and return its metadata information. The function  validates the
-    module's manifest to ensure the module could be imported. Modules that would fail to be imported are not returned.
+    path to the directory that contains Whiskey's "PSModules" directory (this is usually the build directory). The
+    function uses `Get-Module` to find the requested module and return its metadata information. The function  validates
+    the module's manifest to ensure the module could be imported. Modules that would fail to be imported are not
+    returned.
 
     If multiple versions of a module exist, the latest version is returned. If you want a specific version, pass the
-    version to the `Version` parameter. The `Get-WhiskeyPSModule` will return the latest version that matches
-    the version. Wildcards are supported.
+    version to the `Version` parameter. The `Get-WhiskeyPSModule` will return the latest version that matches the
+    version. Wildcards are supported.
 
     If no modules exist, nothing is returned and no errors are written.
 
@@ -30,14 +31,14 @@ function Get-WhiskeyPSModule
     Get-WhiskeyPSModule -Name Pester -PSModulesRoot $Context.BuildRoot
 
     Demonstrates how to call `Get-WhiskeyPSModule` to get module information. In this case, the function will return the
-    latest version of the `Pester` module, and will include the PSModules path in the build root.
+    latest version of the `Pester` module, and will include the PSModules path in the build directory.
 
     .EXAMPLE
     Get-WhiskeyPSModule -Name Pester -PSModulesRoot $Context.BuildRoot -Version '4.*'
 
     Demonstrates how to call `Get-WhiskeyPSModule` to get module information for a specific version of a module. In this
     example, the function will return the latest 4.x version of the `Pester` module, and will include the PSModules path
-    in the build root.
+    in the build directory.
     #>
     [CmdletBinding()]
     param(

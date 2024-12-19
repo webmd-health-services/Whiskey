@@ -63,7 +63,7 @@ Replace usages of `PublishNodeModule` task with these commands:
 
 You'll need to make sure you have an ".npmrc" file in the current user's home directory configured with credentials in
 order for the `publish` task to work. To get you started, here is the template of the ".npmrc" file the task currently
-create a temporary ".npmrc" in the build root:
+create a temporary ".npmrc" in the build directory:
 
 ```ini
 //REGISTRY_DOMAIN_NAME/REGISTRY_PATH:_password="BASE_64_ENCODED_PASSWORD"
@@ -76,7 +76,7 @@ YOu can also use the `npm login` or `npm adduser` commands, which by default wil
 
 ### Added
 
-### General
+#### General
 
 Task output will now appear in the console when using the `.OutVariable` property.
 
@@ -85,15 +85,15 @@ If a task has conditions, variable evaluation on the task's properties only happ
 #### InstallNodeJs Task
 
 The `InstallNodeJs` task now looks up the Node.js version to install from a ".node-version" file, if a version isn't
-given with the task's `Version` property. The ".node-version" file is is expected to be in the build root. If that file
-doesn't exist, that task looks for a `whiskey.node` property in the "package.json" file in the build root. The path to
-the "package.json" file to use can be customized with the new `PackageJsonPath` property. If neither file exists, the
-task will install the latest LTS version of Node.js. The task supports partial version numbers, e.g. `16`, `16.20`, and
-`16.20.2` would all install Node.js version "16.20.2".
+given with the task's `Version` property. The ".node-version" file is is expected to be in the build directory. If that
+file doesn't exist, that task looks for a `whiskey.node` property in the "package.json" file in the build directory. The
+path to the "package.json" file to use can be customized with the new `PackageJsonPath` property. If neither file
+exists, the task will install the latest LTS version of Node.js. The task supports partial version numbers, e.g. `16`,
+`16.20`, and `16.20.2` would all install Node.js version "16.20.2".
 
 Wherever Node.js is installed, the `InstallNodeJs` task now adds the install directory to the current build process's
-`PATH` environment variable. By default, the task installs into a ".node" directory in the build root. Use the `Path`
-task property to change the directory.
+`PATH` environment variable. By default, the task installs into a ".node" directory in the build directory. Use the
+`Path` task property to change the directory.
 
 The task now supports pinning NPM to a specific version. Use the `NpmVersion` task property or by
 specifying a `whiskey.npm` property in the "package.json" file. Partial version numbers are supported.
@@ -185,7 +185,8 @@ Build:
 
 ### Changed
 
-The `InstallNode` task renamed to `InstallNodeJs`.
+* The `InstallNode` task renamed to `InstallNodeJs`.
+* Paths passed to build tasks can now be outside the build directory.
 
 ### Deprecated
 
@@ -212,7 +213,7 @@ expected version.
 
 The `InstallNodeJs` task no longer uses the `engines.node` property in the "package.json" file to determine what version
 of Node.js to install. Instead, it uses the `Version` task property. If that isn't given, it uses the version in the
-".node-version" file in the build root. If that file doesn't exist, it uses the `whiskey.node` property in the
+".node-version" file in the build directory. If that file doesn't exist, it uses the `whiskey.node` property in the
 "package.json" file. Otherwise, it installs the latest LTS version.
 
 ## 0.61.0
