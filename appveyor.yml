@@ -54,6 +54,7 @@ for:
     - job_group: ps
   build_script:
   - ps: |
+        dir env:
         try
         {
             iwr https://raw.githubusercontent.com/webmd-health-services/Prism/main/Scripts/init.ps1 | iex | Format-Table
@@ -72,6 +73,7 @@ for:
     - job_group: pwsh
   build_script:
   - pwsh: |
+        dir env:
         try
         {
             iwr https://raw.githubusercontent.com/webmd-health-services/Prism/main/Scripts/init.ps1 | iex | Format-Table
