@@ -3,6 +3,11 @@
 
 # Whiskey Changelog
 
+## 0.61.1
+
+* Fixed: the `NuGetPush` task leaks NuGet API key to the information stream.
+* Fixed: the `NuGetPush` task doesn't allow NuGet to use credentials stored in the NuGet.config file.
+
 ## 0.61.0
 
 > Released 12 June 2024
