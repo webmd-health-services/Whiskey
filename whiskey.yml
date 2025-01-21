@@ -11,6 +11,7 @@ Build:
     Prerelease:
     - main: ""
     - master: ""
+    - "release/*": ""
     - "*": rc1
 
 # Update the AppVeyor build/version number.
