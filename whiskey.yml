@@ -11,6 +11,7 @@ Build:
     Prerelease:
     - main: ""
     - master: ""
+    - "release/*": ""
     - "*": rc1
 
 # Update the AppVeyor build/version number.
@@ -198,7 +199,6 @@ Build:
                     - "*/Test/Log.Tests.ps1"
                     - "*/Test/New-WhiskeyContext.Tests.ps1"
                     - "*/Test/NodeLicenseChecker.Tests.ps1"
-                    - "*/Test/NuGetRestore.Tests.ps1"
                     - "*/Test/Pipeline.Tests.ps1"
                     - "*/Test/PublishPowerShellScript.Tests.ps1"
                     - "*/Test/Resolve-WhiskeyDotnetSdkVersion.Tests.ps1"
@@ -249,7 +249,6 @@ Build:
             - "Test/Log.Tests.ps1"
             - "Test/New-WhiskeyContext.Tests.ps1"
             - "Test/NodeLicenseChecker.Tests.ps1"
-            - "Test/NuGetRestore.Tests.ps1"
             - "Test/Pipeline.Tests.ps1"
             - "Test/PublishPowerShellScript.Tests.ps1"
             - "Test/Resolve-WhiskeyDotnetSdkVersion.Tests.ps1"
@@ -358,14 +357,14 @@ Build:
                     Verbosity: Detailed
                 Run:
                     Path:
-                    - Test\Version.Tests.ps1
+                    - Test\NuGetRestore.Tests.ps1
                     - Test\PowerShell.Tests.ps1
                     - Test\ProGetUniversalPackage.Tests.ps1
+                    - Test\Version.Tests.ps1
         - Pester4:
             Script:
             - Test\MergeFile.Tests.ps1
             - Test\NodeLicenseChecker.Tests.ps1
-            - Test\NuGetRestore.Tests.ps1
             - Test\PublishPowerShellModule.Tests.ps1
             - Test\Resolve-WhiskeyNodePath.Tests.ps1
             - Test\Find-WhiskeyPowerShellModule.Tests.ps1
