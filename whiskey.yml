@@ -130,8 +130,6 @@ Build:
                     ExcludePath:
                     # Windows-only.
                     - "*/MSBuild.Tests.ps1"
-                    - "*/NuGetPack.Tests.ps1"
-                    - "*/NuGetPush.Tests.ps1"
                     - "*/NUnit2.Tests.ps1"
                     - "*/NUnit3.Tests.ps1"
                     # Run in other queues.
@@ -323,7 +321,6 @@ Build:
                     Verbosity: Detailed
                 Run:
                     Path:
-                    - Test\NuGetRestore.Tests.ps1
                     - Test\MergeFile.Tests.ps1
                     - Test\PowerShell.Tests.ps1
                     - Test\ProGetUniversalPackage.Tests.ps1
@@ -362,7 +359,6 @@ Build:
                     - "*\\Test\\Invoke-WhiskeyTask.Tests.ps1"
                     - "*\\Test\\MergeFile.Tests.ps1"
                     - "*\\Test\\MSBuild.Tests.ps1"
-                    - "*\\Test\\NuGetPush.Tests.ps1"
                     - "*\\Test\\NUnit2.Tests.ps1"
                     - "*\\Test\\NUnit3.Tests.ps1"
                     - "*\\Test\\Parallel.Tests.ps1"

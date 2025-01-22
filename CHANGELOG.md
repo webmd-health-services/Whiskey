@@ -196,6 +196,9 @@ build's `PATH` or use Whiskey's `InstallNodeJs` task, which will install a priva
 adds it to your build's `PATH`. We recommend using [Volta](https://volta.sh/) as a global Node.js version manager
 because it supports side-by-side versions of Node.js and automatic installation.
 
+The `NuGetPack`, `NuGetPush`, and `NuGetRestore` tasks. Replaces usages with raw `nuget` commands. You will need to
+install a global version of NuGet and add it to your PATH environment variable.
+
 For task authors, automatically installing Node and node modules is deprecated. Remove usages of
 `[Whiskey.RequiresTool('Node')]` and `[Whiskey.RequiresNodeModule]` attributes from your tasks. Instead of requiring
 Whiskey to install Node.js, add Whiskey's `InstallNodeJs` task to the build. To get a node module installed, add `npm

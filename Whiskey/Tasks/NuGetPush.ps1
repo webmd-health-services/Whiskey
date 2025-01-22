@@ -2,7 +2,8 @@
 function Publish-WhiskeyNuGetPackage
 {
     [Whiskey.Task('NuGetPush', Platform='Windows', Aliases=('PublishNuGetLibrary','PublishNuGetPackage'),
-        WarnWhenUsingAlias)]
+        WarnWhenUsingAlias, Obsolete,
+        ObsoleteMessage='The "NuGetPush" task is obsolete. It will be removed in a future version of Whiskey. Please use "nuget" commands instead.')]
     [Whiskey.RequiresNuGetPackage('NuGet.CommandLine', Version='6.10.*', PathParameterName='NuGetPath')]
     [CmdletBinding()]
     param(
