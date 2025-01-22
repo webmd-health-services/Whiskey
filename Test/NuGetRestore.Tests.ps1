@@ -13,6 +13,8 @@ BeforeAll {
     $script:version = $null
     $script:argument = $null
     $script:failed = $false
+    $script:testDirPath = $null
+    $script:testNum = 0
 
     function GivenArgument
     {
@@ -124,6 +126,10 @@ BeforeAll {
             $parameter['Argument'] = $script:argument
         }
 
+        $parameter['Verbose'] = $parameter['Debug'] = $true
+
+        $VerbosePreference = 'Continue'
+        $DebugPreference = 'Continue'
         try
         {
             Invoke-WhiskeyTask -TaskContext $context -Parameter $parameter -Name 'NuGetRestore'
@@ -133,10 +139,20 @@ BeforeAll {
             $script:failed = $true
             Write-Error -ErrorRecord $_
         }
+
+        $packagesDirPath = Join-Path -Path $script:testDirPath -ChildPath 'packages'
+        if (Test-Path -Path $packagesDirPath)
+        {
+            Get-ChildItem -Path $packagesDirPath | Out-String | Write-Verbose -Verbose
+        }
+        else
+        {
+            Write-Verbose -Message "Packages directory ""${packagesDirPath}"" doesn't exist." -Verbose
+        }
     }
 }
 
-Describe 'NuGetRestore' {
+Describe 'NuGetRestore' -Skip:((Test-Path -Path 'env:appveyor_build_worker_image') -and ($env:appveyor_build_worker_image -eq 'Visual Studio 2013')) {
     BeforeEach {
         $Global:Error.Clear()
         $script:packagesConfigPath = $null
@@ -147,9 +163,13 @@ Describe 'NuGetRestore' {
         New-Item -Path $script:testDir -ItemType Directory
     }
 
-    if ((Get-Variable -Name 'IsWindows' -ErrorAction Ignore) -and -not $IsWindows)
+    if (-not (Test-Path -Path 'variable:IsWindows'))
     {
-        It 'fails on non-Windows platform' {
+        Set-Variable -Name 'IsWindows' -Value $true
+    }
+
+    Context 'Not on Windows' -Skip:($IsWindows) {
+        It 'run on non-Windows platform' {
             WhenRestoringPackages -ErrorAction SilentlyContinue
             $script:failed | Should -BeTrue
             $Global:Error[0] | Should -Match 'Windows\ platform'
@@ -157,60 +177,62 @@ Describe 'NuGetRestore' {
         return
     }
 
-    It 'restores packages' {
-        GivenFile 'packages.config' @'
+    Context 'On Windows' -Skip:(-not $IsWindows) {
+        It 'restores packages' {
+            GivenFile 'packages.config' @'
 <?xml version="1.0" encoding="utf-8"?>
 <packages>
-<package id="jQuery" version="3.1.1" targetFramework="net46" />
-<package id="NLog" version="4.3.10" targetFramework="net46" />
+  <package id="jQuery" version="3.7.1" targetFramework="net46" />
+  <package id="NLog" version="5.3.4" targetFramework="net46" />
 </packages>
 '@
-        GivenArgument @( '-PackagesDirectory', '$(WHISKEY_BUILD_ROOT)\packages' )
-        GivenPath 'packages.config'
-        WhenRestoringPackages
-        ThenPackageInstalled 'NuGet.CommandLine.*'
-        ThenPackageInstalled 'jQuery.3.1.1'
-        ThenPackageInstalled 'NLog.4.3.10'
-    }
+            GivenArgument @( '-PackagesDirectory', '$(WHISKEY_BUILD_ROOT)\packages' )
+            GivenPath 'packages.config'
+            WhenRestoringPackages
+            ThenPackageInstalled 'NuGet.CommandLine.*'
+            ThenPackageInstalled 'jQuery.3.7.1'
+            ThenPackageInstalled 'NLog.5.3.4'
+        }
 
-    It 'restores solution' {
-        GivenSolution 'NUnit2PassingTest'
-        GivenPath 'NUnit2PassingTest.sln'
-        WhenRestoringPackages
-        ThenPackageInstalled 'NuGet.CommandLine.*'
-        ThenPackageInstalled 'NUnit.2.6.4'
-    }
+        It 'restores solution' {
+            GivenSolution 'NUnit2PassingTest'
+            GivenPath 'NUnit2PassingTest.sln'
+            WhenRestoringPackages
+            ThenPackageInstalled 'NuGet.CommandLine.*'
+            ThenPackageInstalled 'NUnit.2.6.4'
+        }
 
-    It 'restores multiple paths' {
-        GivenFile 'subproject\packages.config' @'
+        It 'restores multiple paths' {
+            GivenFile 'subproject\packages.config' @'
 <?xml version="1.0" encoding="utf-8"?>
 <packages>
-<package id="jQuery" version="3.1.1" targetFramework="net46" />
-<package id="NLog" version="4.3.10" targetFramework="net46" />
+  <package id="jQuery" version="3.7.1" targetFramework="net46" />
+  <package id="NLog" version="5.3.4" targetFramework="net46" />
 </packages>
 '@
-        GivenSolution 'NUnit2PassingTest'
-        GivenPath 'subproject\packages.config','NUnit2PassingTest.sln'
-        GivenArgument @( '-PackagesDirectory', '$(WHISKEY_BUILD_ROOT)\packages' )
-        WhenRestoringPackages
-        ThenPackageInstalled 'NuGet.CommandLine.*'
-        ThenPackageInstalled 'jQuery.3.1.1'
-        ThenPackageInstalled 'NLog.4.3.10'
-        ThenPackageInstalled 'NUnit.2.6.4'
-    }
+            GivenSolution 'NUnit2PassingTest'
+            GivenPath 'subproject\packages.config','NUnit2PassingTest.sln'
+            GivenArgument @( '-PackagesDirectory', '$(WHISKEY_BUILD_ROOT)\packages' )
+            WhenRestoringPackages
+            ThenPackageInstalled 'NuGet.CommandLine.*'
+            ThenPackageInstalled 'jQuery.3.7.1'
+            ThenPackageInstalled 'NLog.5.3.4'
+            ThenPackageInstalled 'NUnit.2.6.4'
+        }
 
-    It 'uses custom version of NuGet' {
-        GivenFile 'packages.config' @'
+        It 'uses custom version of NuGet' {
+            GivenFile 'packages.config' @'
 <?xml version="1.0" encoding="utf-8"?>
 <packages>
-<package id="jQuery" version="3.1.1" targetFramework="net46" />
+  <package id="jQuery" version="3.7.1" targetFramework="net46" />
 </packages>
 '@
-        GivenPath 'packages.config'
-        GivenArgument @( '-PackagesDirectory', '$(WHISKEY_BUILD_ROOT)\packages' )
-        GivenVersion '3.5.0'
-        WhenRestoringPackages
-        ThenPackageInstalled 'NuGet.CommandLine.3.5.0'
-        ThenPackageInstalled 'jQuery.3.1.1'
+            GivenPath 'packages.config'
+            GivenArgument @( '-PackagesDirectory', '$(WHISKEY_BUILD_ROOT)\packages' )
+            GivenVersion '3.5.0'
+            WhenRestoringPackages
+            ThenPackageInstalled 'NuGet.CommandLine.3.5.0'
+            ThenPackageInstalled 'jQuery.3.7.1'
+        }
     }
 }

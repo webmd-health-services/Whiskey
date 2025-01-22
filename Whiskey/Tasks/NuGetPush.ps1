@@ -47,22 +47,12 @@ function Publish-WhiskeyNuGetPackage
                     }
                 }
 
+    $apiKey = ''
     $apiKeyID = $TaskParameter['ApiKeyID']
-    if( -not $apiKeyID )
+    if ($apiKeyID)
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message ('Property ''ApiKeyID'' is mandatory. It should be the ID/name of the API key to use when publishing NuGet packages to {0}, e.g.:
-
-    Build:
-    - PublishNuGetPackage:
-        Uri: {0}
-        ApiKeyID: API_KEY_ID
-
-Use the `Add-WhiskeyApiKey` function to add the API key to the build.
-
-            ' -f $Url)
-        return
+        $apiKey = Get-WhiskeyApiKey -Context $TaskContext -ID $apiKeyID -PropertyName 'ApiKeyID'
     }
-    $apiKey = Get-WhiskeyApiKey -Context $TaskContext -ID $apiKeyID -PropertyName 'ApiKeyID'
 
     $NuGetPath = Join-Path -Path $NuGetPath -ChildPath 'tools\NuGet.exe' -Resolve
     if( -not $NuGetPath )
@@ -143,8 +133,13 @@ Use the `Add-WhiskeyApiKey` function to add the API key to the build.
             return
         }
 
+        $optionalArgs = @{}
+        if ($apiKey)
+        {
+            $optionalArgs['ApiKey'] = $apiKey
+        }
         # Publish package and symbols to NuGet
-        Invoke-WhiskeyNuGetPush -Path $packagePath -Url $Url -ApiKey $apiKey -NuGetPath $NuGetPath
+        Invoke-WhiskeyNuGetPush -Path $packagePath -Url $Url -ApiKey $apiKey -NuGetPath $NuGetPath @optionalArgs
 
         if( -not ($TaskParameter['SkipUploadedCheck'] | ConvertFrom-WhiskeyYamlScalar) )
         {

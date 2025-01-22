@@ -216,6 +216,11 @@ of Node.js to install. Instead, it uses the `Version` task property. If that isn
 ".node-version" file in the build directory. If that file doesn't exist, it uses the `whiskey.node` property in the
 "package.json" file. Otherwise, it installs the latest LTS version.
 
+## 0.61.1
+
+* Fixed: the `NuGetPush` task leaks NuGet API key to the information stream.
+* Fixed: the `NuGetPush` task doesn't allow NuGet to use credentials stored in the NuGet.config file.
+
 ## 0.61.0
 
 > Released 12 June 2024

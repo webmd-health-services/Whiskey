@@ -11,6 +11,7 @@ Build:
     Prerelease:
     - main: ""
     - master: ""
+    - "release/*": ""
     - "*": rc1
     IncrementPrereleaseVersion: true
 
@@ -322,10 +323,11 @@ Build:
                     Verbosity: Detailed
                 Run:
                     Path:
-                    - Test\Version.Tests.ps1
+                    - Test\NuGetRestore.Tests.ps1
                     - Test\MergeFile.Tests.ps1
                     - Test\PowerShell.Tests.ps1
                     - Test\ProGetUniversalPackage.Tests.ps1
+                    - Test\Version.Tests.ps1
                     - Test\Zip.Tests.ps1
         - Pester4:
             Script:
