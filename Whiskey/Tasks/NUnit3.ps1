@@ -21,7 +21,6 @@ function Invoke-WhiskeyNUnit3Task
         [String] $OpenCoverPath,
 
         [String] $ReportGeneratorPath
-
     )
 
     Set-StrictMode -Version 'Latest'

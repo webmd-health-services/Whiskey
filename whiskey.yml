@@ -11,6 +11,7 @@ Build:
     Prerelease:
     - main: ""
     - master: ""
+    - "release/*": ""
     - "*": rc1
     IncrementPrereleaseVersion: true
 
@@ -129,8 +130,6 @@ Build:
                     ExcludePath:
                     # Windows-only.
                     - "*/MSBuild.Tests.ps1"
-                    - "*/NuGetPack.Tests.ps1"
-                    - "*/NuGetPush.Tests.ps1"
                     - "*/NUnit2.Tests.ps1"
                     - "*/NUnit3.Tests.ps1"
                     # Run in other queues.
@@ -187,7 +186,6 @@ Build:
                     - "*/Test/SetVariable.Tests.ps1"
                     - "*/Test/SetVariableFromPowerShellDataFile.Tests.ps1"
                     - "*/Test/SetVariableFromXml.Tests.ps1"
-                    - "*/Test/TaskDefaults.Tests.ps1"
                     - "*/Test/Uninstall-WhiskeyNodeModule.Tests.ps1"
                     - "*/Test/Uninstall-WhiskeyPowerShellModule.Tests.ps1"
                     - "*/Test/Uninstall-WhiskeyTool.Tests.ps1"
@@ -229,7 +227,6 @@ Build:
             - "Test/SetVariable.Tests.ps1"
             - "Test/SetVariableFromPowerShellDataFile.Tests.ps1"
             - "Test/SetVariableFromXml.Tests.ps1"
-            - "Test/TaskDefaults.Tests.ps1"
             - "Test/Uninstall-WhiskeyNodeModule.Tests.ps1"
             - "Test/Uninstall-WhiskeyPowerShellModule.Tests.ps1"
             - "Test/Uninstall-WhiskeyTool.Tests.ps1"
@@ -322,10 +319,10 @@ Build:
                     Verbosity: Detailed
                 Run:
                     Path:
-                    - Test\Version.Tests.ps1
                     - Test\MergeFile.Tests.ps1
                     - Test\PowerShell.Tests.ps1
                     - Test\ProGetUniversalPackage.Tests.ps1
+                    - Test\Version.Tests.ps1
                     - Test\Zip.Tests.ps1
         - Pester4:
             Script:
@@ -360,7 +357,6 @@ Build:
                     - "*\\Test\\Invoke-WhiskeyTask.Tests.ps1"
                     - "*\\Test\\MergeFile.Tests.ps1"
                     - "*\\Test\\MSBuild.Tests.ps1"
-                    - "*\\Test\\NuGetPush.Tests.ps1"
                     - "*\\Test\\NUnit2.Tests.ps1"
                     - "*\\Test\\NUnit3.Tests.ps1"
                     - "*\\Test\\Parallel.Tests.ps1"
@@ -406,7 +402,6 @@ Build:
                     - "*\\Test\\SetVariable.Tests.ps1"
                     - "*\\Test\\SetVariableFromPowerShellDataFile.Tests.ps1"
                     - "*\\Test\\SetVariableFromXml.Tests.ps1"
-                    - "*\\Test\\TaskDefaults.Tests.ps1"
                     - "*\\Test\\Uninstall-WhiskeyPowerShellModule.Tests.ps1"
                     - "*\\Test\\Uninstall-WhiskeyTool.Tests.ps1"
         - Pester4:
@@ -444,7 +439,6 @@ Build:
             - "Test\\SetVariable.Tests.ps1"
             - "Test\\SetVariableFromPowerShellDataFile.Tests.ps1"
             - "Test\\SetVariableFromXml.Tests.ps1"
-            - "Test\\TaskDefaults.Tests.ps1"
             - "Test\\Uninstall-WhiskeyPowerShellModule.Tests.ps1"
             - "Test\\Uninstall-WhiskeyTool.Tests.ps1"
 

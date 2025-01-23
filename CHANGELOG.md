@@ -196,6 +196,9 @@ build's `PATH` or use Whiskey's `InstallNodeJs` task, which will install a priva
 adds it to your build's `PATH`. We recommend using [Volta](https://volta.sh/) as a global Node.js version manager
 because it supports side-by-side versions of Node.js and automatic installation.
 
+The `NuGetPack`, `NuGetPush`, and `NuGetRestore` tasks. Replaces usages with raw `nuget` commands. You will need to
+install a global version of NuGet and add it to your PATH environment variable.
+
 For task authors, automatically installing Node and node modules is deprecated. Remove usages of
 `[Whiskey.RequiresTool('Node')]` and `[Whiskey.RequiresNodeModule]` attributes from your tasks. Instead of requiring
 Whiskey to install Node.js, add Whiskey's `InstallNodeJs` task to the build. To get a node module installed, add `npm
@@ -215,6 +218,11 @@ The `InstallNodeJs` task no longer uses the `engines.node` property in the "pack
 of Node.js to install. Instead, it uses the `Version` task property. If that isn't given, it uses the version in the
 ".node-version" file in the build directory. If that file doesn't exist, it uses the `whiskey.node` property in the
 "package.json" file. Otherwise, it installs the latest LTS version.
+
+## 0.61.1
+
+* Fixed: the `NuGetPush` task leaks NuGet API key to the information stream.
+* Fixed: the `NuGetPush` task doesn't allow NuGet to use credentials stored in the NuGet.config file.
 
 ## 0.61.0
 

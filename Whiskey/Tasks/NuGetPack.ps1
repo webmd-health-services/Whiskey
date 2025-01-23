@@ -1,7 +1,8 @@
 
 function New-WhiskeyNuGetPackage
 {
-    [Whiskey.Task('NuGetPack',Platform='Windows')]
+    [Whiskey.Task('NuGetPack', Platform='Windows', Obsolete,
+        ObsoleteMessage='The "NuGetPack" task is obsolete. It will be removed in a future version of Whiskey. Please use "nuget" commands instead.')]
     [Whiskey.RequiresNuGetPackage('NuGet.CommandLine', Version='6.10.*', PathParameterName='NuGetPath')]
     [CmdletBinding()]
     param(
