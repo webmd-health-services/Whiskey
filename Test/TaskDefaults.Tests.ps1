@@ -2,89 +2,91 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+BeforeAll {
+    Set-StrictMode -Version 'Latest'
 
-$testRoot = $null
-$taskContext = $null
-$taskDefaults = @{}
-$threwException = $false
+    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-function Init
-{
-    $script:testRoot = New-WhiskeyTestRoot
-    $script:taskContext = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $testRoot
+    $script:testRoot = $null
+    $script:taskContext = $null
     $script:taskDefaults = @{}
     $script:threwException = $false
-}
 
-function GivenRunMode
-{
-    param(
-        $RunMode
-    )
-
-    $script:taskContext.RunMode = $RunMode
-}
-
-function GivenTaskDefaults
-{
-    param(
-        [hashtable]$Defaults,
-        $ForTask
-    )
-
-    $script:taskDefaults[$ForTask] = $Defaults
-}
-
-function WhenSettingTaskDefaults
-{
-    [CmdletBinding()]
-    param()
-
-    $Global:Error.Clear()
-
-    try
+    function GivenRunMode
     {
-        Invoke-WhiskeyTask -TaskContext $taskContext -Name 'TaskDefaults' -Parameter $taskDefaults
+        param(
+            $RunMode
+        )
+
+        $script:taskContext.RunMode = $RunMode
     }
-    catch
+
+    function GivenTaskDefaults
     {
-        $script:threwException = $true
-        Write-Error -ErrorRecord $_
+        param(
+            [hashtable]$Defaults,
+            $ForTask
+        )
+
+        $script:taskDefaults[$ForTask] = $Defaults
+    }
+
+    function WhenSettingTaskDefaults
+    {
+        [CmdletBinding()]
+        param()
+
+        $Global:Error.Clear()
+
+        try
+        {
+            Invoke-WhiskeyTask -TaskContext $script:taskContext -Name 'TaskDefaults' -Parameter $script:taskDefaults
+        }
+        catch
+        {
+            $script:threwException = $true
+            Write-Error -ErrorRecord $_
+        }
+    }
+
+    function ThenFailedWithError
+    {
+        param(
+            $ErrorMessage
+        )
+
+        $script:threwException | Should -BeTrue
+        $Global:Error[0] | Should -Match $ErrorMessage
+    }
+
+    function ThenNoErrors
+    {
+        $Global:Error | Should -BeNullOrEmpty
+    }
+
+    function ThenTaskDefaultsContains
+    {
+        param(
+            $Task,
+            $Property,
+            $Value
+        )
+
+        $script:taskContext.TaskDefaults.ContainsKey($Task) | Should -BeTrue
+        $script:taskContext.TaskDefaults[$Task].ContainsKey($Property) | Should -BeTrue
+        $script:taskContext.TaskDefaults[$Task][$Property] | Should -Be $Value
     }
 }
 
-function ThenFailedWithError
-{
-    param(
-        $ErrorMessage
-    )
+Describe 'TaskDefault' {
+    BeforeEach {
+        $script:testRoot = New-WhiskeyTestRoot
+        $script:taskContext = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $script:testRoot
+        $script:taskDefaults = @{}
+        $script:threwException = $false
+    }
 
-    $threwException | Should -BeTrue
-    $Global:Error[0] | Should -Match $ErrorMessage
-}
-
-function ThenNoErrors
-{
-    $Global:Error | Should -BeNullOrEmpty
-}
-
-function ThenTaskDefaultsContains
-{
-    param(
-        $Task,
-        $Property,
-        $Value
-    )
-
-    $taskContext.TaskDefaults.ContainsKey($Task) | Should -BeTrue
-    $taskContext.TaskDefaults[$Task].ContainsKey($Property) | Should -BeTrue
-    $taskContext.TaskDefaults[$Task][$Property] | Should -Be $Value
-}
-
-Describe 'TaskDefaults.when setting defaults' {
     It 'should use the defaults' {
-        Init
         GivenTaskDefaults @{ 'Version' = 12.0 } -ForTask 'MSBuild'
         GivenTaskDefaults @{ 'Symbols' = 'false' } -ForTask 'NuGetPack'
         WhenSettingTaskDefaults
@@ -101,11 +103,8 @@ Describe 'TaskDefaults.when setting defaults' {
         ThenTaskDefaultsContains -Task 'NUnit3' -Property 'Version' -Value '3.9.0'
         ThenNoErrors
     }
-}
 
-Describe 'TaskDefaults.when setting an existing default to a new value' {
     It 'should change default' {
-        Init
         GivenTaskDefaults @{ 'Version' = 12.0 } -ForTask 'MSBuild'
         WhenSettingTaskDefaults
         ThenTaskDefaultsContains -Task 'MSBuild' -Property 'Version' -Value 12.0
@@ -116,31 +115,22 @@ Describe 'TaskDefaults.when setting an existing default to a new value' {
         ThenTaskDefaultsContains -Task 'MSBuild' -Property 'Version' -Value 13.0
         ThenNoErrors
     }
-}
 
-Describe 'TaskDefaults.when given invalid task name' {
     It 'should fail' {
-        Init
         GivenTaskDefaults @{ 'Version' = 12.0 } -ForTask 'NotARealTask'
         WhenSettingTaskDefaults -ErrorAction SilentlyContinue
         ThenFailedWithError 'Task ''NotARealTask'' does not exist.'
     }
-}
 
-Describe 'TaskDefaults.when setting defaults during Clean mode' {
     It 'should set defaults' {
-        Init
         GivenRunMode 'Clean'
         GivenTaskDefaults @{ 'Version' = 12.0 } -ForTask 'MSBuild'
         WhenSettingTaskDefaults
         ThenTaskDefaultsContains -Task 'MSBuild' -Property 'Version' -Value 12.0
         ThenNoErrors
     }
-}
 
-Describe 'TaskDefaults.when setting defaults during Initialize mode' {
     It 'should set defaults' {
-        Init
         GivenRunMode 'Initialize'
         GivenTaskDefaults @{ 'Version' = 12.0 } -ForTask 'MSBuild'
         WhenSettingTaskDefaults
