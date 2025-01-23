@@ -88,10 +88,10 @@ Describe 'TaskDefault' {
 
     It 'should use the defaults' {
         GivenTaskDefaults @{ 'Version' = 12.0 } -ForTask 'MSBuild'
-        GivenTaskDefaults @{ 'Symbols' = 'false' } -ForTask 'NuGetPack'
+        GivenTaskDefaults @{ 'Path' = 'fubarsnafu' } -ForTask 'Delete'
         WhenSettingTaskDefaults
         ThenTaskDefaultsContains -Task 'MSBuild' -Property 'Version' -Value 12.0
-        ThenTaskDefaultsContains -Task 'NuGetPack' -Property 'Symbols' -Value 'false'
+        ThenTaskDefaultsContains -Task 'Delete' -Property 'Path' -Value 'fubarsnafu'
         ThenNoErrors
 
         # Make sure existing defaults don't get overwritten
@@ -99,7 +99,7 @@ Describe 'TaskDefault' {
         GivenTaskDefaults @{ 'Version' = '3.9.0' } -ForTask 'NUnit3'
         WhenSettingTaskDefaults
         ThenTaskDefaultsContains -Task 'MSBuild' -Property 'Version' -Value 12.0
-        ThenTaskDefaultsContains -Task 'NuGetPack' -Property 'Symbols' -Value 'false'
+        ThenTaskDefaultsContains -Task 'Delete' -Property 'Path' -Value 'fubarsnafu'
         ThenTaskDefaultsContains -Task 'NUnit3' -Property 'Version' -Value '3.9.0'
         ThenNoErrors
     }
