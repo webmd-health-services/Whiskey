@@ -373,9 +373,12 @@ function Invoke-WhiskeyTask
 
             if ($outVarName)
             {
-                Add-WhiskeyVariable -Context $TaskContext `
-                                    -Name $outVarName `
-                                    -Value (Get-Variable -Name $outVarName -ValueOnly)
+                $outVarValue = Get-Variable -Name $outVarName -ValueOnly
+                if ($outVarValue -is [Collections.ICollection] -and $outVarValue.Count -eq 1)
+                {
+                    $outVarValue = $outVarValue | Select-Object -First 1
+                }
+                Add-WhiskeyVariable -Context $TaskContext -Name $outVarName -Value $outVarValue
             }
             $result = 'COMPLETED'
         }

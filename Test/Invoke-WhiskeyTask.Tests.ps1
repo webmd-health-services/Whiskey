@@ -1252,6 +1252,15 @@ Describe 'Invoke-WhiskeyTask' {
         }
     }
 
+    It 'unrolls single object collections set to OutVariable' {
+        # Single objects returned by PowerShell come back as a single element ArrayList.
+        $ps = '[pscustomobject]@{ fubar = ''snafu'' }'
+        WhenRunningTask 'PowerShell' -Parameter @{ 'ScriptBlock' = $ps ; '.OutVariable' = 'OUTPUT' }
+        ThenPipelineSucceeded
+        $script:context.Variables['OUTPUT'].GetType() | Should -Be ([pscustomobject]@{}).GetType()
+        $script:context.Variables['OUTPUT'] | Should -HaveCount 1
+    }
+
     $notOnWindows = (Test-Path -Path 'variable:IsWindows') -and -not $IsWindows
     It 'runs commands' -Skip:$notOnWindows {
         WhenRunningTask "cmd /C echo Hello, World! > helloworld.txt"
