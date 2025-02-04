@@ -180,11 +180,6 @@ Describe 'Resolve-WhiskeyVariable' {
         ThenValueIs ('002003')
     }
 
-    It 'ignores non-string object' {
-        WhenResolving 4
-        ThenValueIs '4'
-    }
-
     It 'resolves each item in an array' {
         GivenEnvironmentVariable 'ResolveWhiskeyVariable' -WithValue '004'
         WhenResolving @( '$(ResolveWhiskeyVariable)', 'no variable', '4' )
@@ -557,5 +552,10 @@ Describe 'Resolve-WhiskeyVariable' {
         $script:context.Version.SemVer2 = [SemVersion.SemanticVersion]'1.2.3-fubar.5+snafu.6'
         WhenResolving -ByName 'WHISKEY_SEMVER2_VERSION'
         ThenValueIs '1.2.3'
+    }
+
+    It 'ignores non strings' -ForEach @(([pscustomobject]@{ fubar = 'snafu' }), $true, $false, 1, 0, 1.1) {
+        WhenResolving $_
+        ThenValueIs $_
     }
 }

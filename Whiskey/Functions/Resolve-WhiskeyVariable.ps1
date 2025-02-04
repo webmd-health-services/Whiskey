@@ -197,8 +197,13 @@ function Resolve-WhiskeyVariable
             return ,$InputObject
         }
 
+        if ($InputObject -isnot [String])
+        {
+            return $InputObject
+        }
+
         $startAt = 0
-        $haystack = $InputObject.ToString()
+        $haystack = $InputObject
         do
         {
             # Parse the variable expression, everything between $( and )
