@@ -339,12 +339,12 @@ function Resolve-WhiskeyVariable
                 return $InputObject
             }
 
-            if( $value -eq $null )
+            if ($null -eq $value)
             {
                 $value = ''
             }
 
-            if( $value -ne $null -and $memberName )
+            if ($null -ne $value -and $memberName)
             {
                 if( -not (Get-Member -Name $memberName -InputObject $value ) )
                 {
