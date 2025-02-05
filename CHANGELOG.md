@@ -209,6 +209,10 @@ All `Whiskey.Requires*` task attributes will eventually be deprecated and remove
 The `Uri` property on the `NuGetPush`, `PublishBitbucketServerTag`, and `PublishBuildMasterPackage` tasks. Use the
 `Url` property instead. The `Uri` property will be removed in a future version of Whiskey.
 
+### Fixed
+
+* Complex object values get set to an empty string when passed to a task.
+
 ### Removed
 
 The `Force` parameter on the `InstallNodeJs` task. The task now will automatically re-install Node.js if it isn't at the

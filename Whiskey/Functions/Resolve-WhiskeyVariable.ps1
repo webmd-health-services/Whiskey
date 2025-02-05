@@ -197,8 +197,13 @@ function Resolve-WhiskeyVariable
             return ,$InputObject
         }
 
+        if ($InputObject -isnot [String])
+        {
+            return $InputObject
+        }
+
         $startAt = 0
-        $haystack = $InputObject.ToString()
+        $haystack = $InputObject
         do
         {
             # Parse the variable expression, everything between $( and )
@@ -339,12 +344,12 @@ function Resolve-WhiskeyVariable
                 return $InputObject
             }
 
-            if( $value -eq $null )
+            if ($null -eq $value)
             {
                 $value = ''
             }
 
-            if( $value -ne $null -and $memberName )
+            if ($null -ne $value -and $memberName)
             {
                 if( -not (Get-Member -Name $memberName -InputObject $value ) )
                 {
