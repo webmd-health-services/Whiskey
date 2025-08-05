@@ -96,7 +96,7 @@
                             'Invoke-WhiskeyBuild',
                             'Invoke-WhiskeyTask',
                             'New-WhiskeyContext',
-                            'Publish-WhiskeyBuildMasterPackage',
+                            'Publish-WhiskeyBuildMasterBuild',
                             'Publish-WhiskeyNuGetPackage',
                             'Publish-WhiskeyProGetUniversalPackage',
                             'Publish-WhiskeyBBServerTag',
