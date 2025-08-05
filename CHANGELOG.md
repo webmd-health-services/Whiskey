@@ -9,8 +9,11 @@
 
 #### General
 
-Rename usages of the `InstallNode` task to `InstallNodeJs`.
-Rename usages of `PublishBitbucketServerTag` tasks's `Uri` property to `Url`.
+* Rename usages of the `InstallNode` task to `InstallNodeJs`.
+* Rename usages of `PublishBitbucketServerTag` tasks's `Uri` property to `Url`.
+* Rename usages of `PublishBuildMasterPackage` to `PublishBuildMasterBuild` along with these properties:
+  * `PackageVariable` to `Variable`
+  * `PackageName` to `BuildNumber`
 
 #### Rename Common Properties
 
@@ -187,6 +190,9 @@ Build:
 
 * The `InstallNode` task renamed to `InstallNodeJs`.
 * Paths passed to build tasks can now be outside the build directory.
+* Renamed `PublishBuildMasterPackage` task to `PublishBuildMasterBuild` along with these properties:
+  * `PackageVariable` to `Variable`
+  * `PackageName` to `BuildNumber`
 
 ### Deprecated
 
