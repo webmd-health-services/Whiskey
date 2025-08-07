@@ -12,6 +12,7 @@ BeforeAll {
     $script:apiKey = $null
     $script:apiKeyID = $null
     $script:release = $null
+    $script:mockBuild = $null
 
     function GivenApiKey
     {
@@ -81,12 +82,10 @@ BeforeAll {
                     }
                     return $null
                 }
-        Mock -CommandName 'New-BMBuild' `
-             -ModuleName 'Whiskey' `
-             -MockWith { return [pscustomobject]@{ Release = $Release; BuildNumber = $BuildNumber; Variable = $Variable } }
-        Mock -CommandName 'Publish-BMReleaseBuild' `
-             -ModuleName 'Whiskey' `
-             -MockWith { return [pscustomobject]@{ Build = $build } }
+
+        $script:mockBuild = [pscustomobject]@{}
+        Mock -CommandName 'New-BMBuild' -ModuleName 'Whiskey' -MockWith { return $mockBuild }
+        Mock -CommandName 'Publish-BMReleaseBuild' -ModuleName 'Whiskey' -MockWith { return [pscustomobject]@{} }
 
         $script:threwException = $false
         try
@@ -108,7 +107,6 @@ BeforeAll {
             [Parameter(Mandatory,Position=0)]
             [String] $Name,
 
-            [Parameter(Mandatory)]
             [switch] $InRelease,
 
             [Parameter(Mandatory)]
@@ -117,26 +115,41 @@ BeforeAll {
             [Parameter(Mandatory)]
             [String] $UsingApiKey,
 
-            [hashtable] $WithVariables
+            [hashtable] $WithVariables,
+
+            [String] $ForApplication,
+
+            [string] $AssignedToPipeline
         )
 
-        Should -Invoke 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Session.Uri -eq $AtUrl }
-        Should -Invoke 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Session.ApiKey -eq $UsingApiKey }
-
+        $inWhiskey = @{ ModuleName = 'Whiskey' }
         $mockRelease = $script:release
-        Should -Invoke 'New-BMBuild' -ModuleName 'Whiskey' -ParameterFilter { $BuildNumber -eq $Name }
+
+        Should -Invoke 'New-BMBuild' @inWhiskey -ParameterFilter { $BuildNumber -eq $Name }
+        if ($ForApplication)
+        {
+            Should -Invoke 'New-BMBuild' @inWhiskey -ParameterFilter { $Application -eq $ForApplication }
+        }
         if ($InRelease)
         {
-            Should -Invoke 'New-BMBuild' -ModuleName 'Whiskey' -ParameterFilter { [Object]::ReferenceEquals($Release, $mockRelease) }
-            Should -Invoke 'New-BMBuild' -ModuleName 'Whiskey' -ParameterFilter { $Session.Uri -eq $AtUrl }
+            Should -Invoke 'Get-BMRelease' @inWhiskey -ParameterFilter { $Session.Uri -eq $AtUrl }
+            Should -Invoke 'Get-BMRelease' @inWhiskey -ParameterFilter { $Session.ApiKey -eq $UsingApiKey }
+
+            Should -Invoke 'New-BMBuild' @inWhiskey -ParameterFilter { [Object]::ReferenceEquals($Release, $mockRelease) }
+            Should -Invoke 'New-BMBuild' @inWhiskey -ParameterFilter { $Session.Uri -eq $AtUrl }
         }
-        Should -Invoke 'New-BMBuild' -ModuleName 'Whiskey' -ParameterFilter { $Session.ApiKey -eq $UsingApiKey }
+        if ($AssignedToPipeline)
+        {
+            Should -Not -Invoke 'Get-BMRelease' @inWhiskey
+            Should -Invoke 'New-BMBuild' @inWhiskey -ParameterFilter { $PipelineName -eq $AssignedToPipeline }
+        }
+        Should -Invoke 'New-BMBuild' @inWhiskey -ParameterFilter { $Session.ApiKey -eq $UsingApiKey }
         if ($WithVariables)
         {
             foreach( $variableName in $WithVariables.Keys )
             {
                 $variableValue = $WithVariables[$variableName]
-                Should -Invoke 'New-BMBuild' -ModuleName 'Whiskey' -ParameterFilter {
+                Should -Invoke 'New-BMBuild' @inWhiskey -ParameterFilter {
                     # $DebugPreference = 'Continue'
                     Write-WhiskeyDebug ('Expected  {0}' -f $variableValue)
                     Write-WhiskeyDebug ('Actual    {0}' -f $Variable[$variableName])
@@ -146,16 +159,16 @@ BeforeAll {
         }
         else
         {
-            Should -Invoke 'New-BMBuild' -ModuleName 'Whiskey' -ParameterFilter { $null -eq $Variable -or $Variable.Count -eq 0 }
+            Should -Invoke 'New-BMBuild' @inWhiskey -ParameterFilter { $null -eq $Variable -or $Variable.Count -eq 0 }
         }
 
         # Pester 5 doesn't set preference variables, so until https://github.com/pester/Pester/issues/2255 is fixed,
         # these need to be left commented out.
         # Should -Invoke 'Get-BMRelease' `
-        #        -ModuleName 'Whiskey' `
+        #        @inWhiskey `
         #        -ParameterFilter { $ErrorActionPreference -eq 'Stop' }
         # Should -Invoke 'New-BMBuild' `
-        #        -ModuleName 'Whiskey' `
+        #        @inWhiskey `
         #        -ParameterFilter { $ErrorActionPreference -eq 'Stop' }
     }
 
@@ -184,10 +197,12 @@ BeforeAll {
 
         Should -Invoke 'Publish-BMReleaseBuild' @inWhiskey -ParameterFilter { $Session.Uri -eq $AtUrl }
         Should -Invoke 'Publish-BMReleaseBuild' @inWhiskey -ParameterFilter { $Session.ApiKey -eq $UsingApiKey }
+        $mockBuild = $script:mockBuild
+        Should -Invoke 'Publish-BMReleaseBuild' @inWhiskey -ParameterFilter { [Object]::ReferenceEquals($Build, $mockBuild) }
         # Pester 5 doesn't set preference variables, so until https://github.com/pester/Pester/issues/2255 is fixed,
         # this needs to be left commented out.
         # Should -Invoke 'Publish-BMReleaseBuild' `
-        #        -ModuleName 'Whiskey' `
+        #        @inWhiskey `
         #        -ParameterFilter { $ErrorActionPreference -eq 'Stop' }
     }
 
@@ -231,6 +246,7 @@ Describe 'PublishBuildMasterBuild' {
         $script:apiKey = $null
         $script:testRoot = New-WhiskeyTestRoot
         $script:release = $null
+        $script:mockBuild = $null
         $Global:Error.Clear()
     }
 
@@ -357,5 +373,33 @@ Describe 'PublishBuildMasterBuild' {
         } -ErrorAction SilentlyContinue
         ThenBuildNotCreated
         ThenTaskFails ('\bApiKeyID\b.*\bmandatory\b')
+    }
+
+    It 'publishes release-less builds' {
+        GivenApiKey 'ten' -WithID '10'
+        GivenVersion '10.10.10-rc.10+10'
+        WhenCreatingBuild -WithProperties @{
+            Url = 'https://10';
+            ApplicationName = 'application 10';
+            ApiKeyID = '10';
+            PipelineName = 'pipeline 10';
+        }
+        ThenCreatedBuild -Name '10.10.10' `
+                         -AssignedToPipeline 'pipeline 10' `
+                         -ForApplication 'application 10' `
+                         -UsingApiKey 'ten' `
+                         -AtUrl 'https://10'
+        ThenBuildDeployed -AtUrl 'https://10' -UsingApiKey 'ten'
+    }
+
+    It 'rejects both release and pipeline' {
+        WhenCreatingBuild -WithProperties @{
+            ApplicationName = 'application 11';
+            ReleaseName = 'release 11';
+            PipelineName = 'pipeline 11';
+        } -ErrorAction SilentlyContinue
+        ThenBuildNotCreated
+        ThenBuildNotDeployed
+        ThenTaskFails 'mutually exclusive'
     }
 }

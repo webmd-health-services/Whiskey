@@ -14,6 +14,8 @@
 * Rename usages of `PublishBuildMasterPackage` to `PublishBuildMasterBuild` along with these properties:
   * `PackageVariable` to `Variable`
   * `PackageName` to `BuildNumber`
+* The `PublishBuildMasterBuild` task now supports publishing builds to applications that don't have releases or where
+  releases are optional. Release-less builds must be assigned a pipeline, so use the new `PipelineName` property.
 
 #### Rename Common Properties
 
@@ -84,6 +86,9 @@ YOu can also use the `npm login` or `npm adduser` commands, which by default wil
 Task output will now appear in the console when using the `.OutVariable` property.
 
 If a task has conditions, variable evaluation on the task's properties only happen if the task runs.
+
+The `PublishBuildMasterBuild` can now publish builds to applications that don't use releases or that have optional
+releases. Use the new  `PipelineName` property instead of the `ReleaseName` property.
 
 #### InstallNodeJs Task
 

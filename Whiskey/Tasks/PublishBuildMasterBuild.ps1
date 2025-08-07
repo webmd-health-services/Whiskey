@@ -4,7 +4,7 @@ function Publish-WhiskeyBuildMasterBuild
     [CmdletBinding()]
     [Whiskey.Task('PublishBuildMasterBuild', Aliases='PublishBuildMasterPackage')]
     [Whiskey.RequiresPowerShellModule('BuildMasterAutomation',
-        Version='4.*',
+        Version='4.2.*',
         VersionParameterName='BuildMasterAutomationVersion')]
     param(
         [Parameter(Mandatory)]
@@ -30,7 +30,9 @@ function Publish-WhiskeyBuildMasterBuild
         [String] $StartAtStage,
 
         [Alias('Uri')]
-        [Uri] $Url
+        [Uri] $Url,
+
+        [String] $PipelineName
     )
 
     Set-StrictMode -Version 'Latest'
@@ -44,10 +46,19 @@ function Publish-WhiskeyBuildMasterBuild
         return
     }
 
-    if (-not $ReleaseName)
+    if (-not $ReleaseName -and -not $PipelineName)
     {
-        $msg = 'Property "ReleaseName" is mandatory. It must be set to the release name in the BuildMaster ' +
-               'application where the build should be published.'
+        $msg = 'Property "ReleaseName" or "PipelineName" is mandatory. To create a build in a release, pass the ' +
+               'release''s name to the "ReleaseName" property. To create a build without a release, the build must ' +
+               'be assigned to a pipeline by passing the pipeline name to the "PipelineName" property.'
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
+        return
+    }
+
+    if ($ReleaseName -and $PipelineName)
+    {
+        $msg = 'Properties "ReleaseName" and "PipelineName" are mutually exclusive. Please use one or the other but ' +
+               'not both.'
         Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
         return
     }
@@ -74,17 +85,27 @@ function Publish-WhiskeyBuildMasterBuild
 
     $version = $TaskContext.Version.SemVer2
 
-    $release =
-        Get-BMRelease -Session $bmSession -Application $applicationName -Name $ReleaseName -ErrorAction Stop
-    if (-not $release)
+    $newArgs = @{}
+    if ($ReleaseName)
     {
-        $msg = "Unable to create and deploy a release build in BuildMaster. Either the ""${applicationName}"" " +
-               "application doesn't exist or it doesn't have a ""${ReleaseName}"" release."
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
-        return
-    }
+        $release =
+            Get-BMRelease -Session $bmSession -Application $ApplicationName -Name $ReleaseName -ErrorAction Stop
+        if (-not $release)
+        {
+            $msg = "Unable to create and deploy a release build in BuildMaster. Either the ""${ApplicationName}"" " +
+                "application doesn't exist or it doesn't have a ""${ReleaseName}"" release."
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
+            return
+        }
 
-    $release | Format-List | Out-String | Write-WhiskeyVerbose -Context $TaskContext
+        $release | Format-List | Out-String | Write-WhiskeyVerbose -Context $TaskContext
+        $newArgs['Release'] = $release
+    }
+    else
+    {
+        $newArgs['Application'] = $ApplicationName
+        $newArgs['PipelineName'] = $PipelineName
+    }
 
     if (-not $BuildNumber)
     {
@@ -96,26 +117,21 @@ function Publish-WhiskeyBuildMasterBuild
         $Variable = @{}
     }
 
-    $build = New-BMBuild -Session $bmSession `
-                         -Release $release `
-                         -BuildNumber $BuildNumber `
-                         -Variable $Variable `
-                         -ErrorAction Stop
+    $build = New-BMBuild -Session $bmSession -BuildNumber $BuildNumber -Variable $Variable @newArgs -ErrorAction Stop
     $build | Format-List | Out-String | Write-WhiskeyVerbose -Context $TaskContext
 
     if ($SkipDeploy)
     {
         Write-WhiskeyVerbose -Context $TaskContext -Message ('Skipping deploy. SkipDeploy property is true')
+        return
     }
-    else
-    {
-        $optionalArgs = @{}
-        if ($StartAtStage)
-        {
-            $optionalArgs['Stage'] = $StartAtStage
-        }
 
-        $deployment = Publish-BMReleaseBuild -Session $bmSession -Build $build @optionalArgs -ErrorAction Stop
-        $deployment | Format-List | Out-String | Write-WhiskeyVerbose -Context $TaskContext
+    $publishArgs = @{}
+    if ($StartAtStage)
+    {
+        $publishArgs['Stage'] = $StartAtStage
     }
+
+    $deployment = Publish-BMReleaseBuild -Session $bmSession -Build $build @publishArgs -ErrorAction Stop
+    $deployment | Format-List | Out-String | Write-WhiskeyVerbose -Context $TaskContext
 }
