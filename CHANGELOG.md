@@ -16,6 +16,7 @@
   * `PackageName` to `BuildNumber`
 * The `PublishBuildMasterBuild` task now supports publishing builds to applications that don't have releases or where
   releases are optional. Release-less builds must be assigned a pipeline, so use the new `PipelineName` property.
+* Remove usages of `ConvertTo-WhiskeySemanticVersion` helper function. Use the `Version` task in your builds instead.
 
 #### Rename Common Properties
 
@@ -233,6 +234,8 @@ The `InstallNodeJs` task no longer uses the `engines.node` property in the "pack
 of Node.js to install. Instead, it uses the `Version` task property. If that isn't given, it uses the version in the
 ".node-version" file in the build directory. If that file doesn't exist, it uses the `whiskey.node` property in the
 "package.json" file. Otherwise, it installs the latest LTS version.
+
+The `ConvertTo-WhiskeySemanticVersion` helper function. Use the `Version` task in your builds instead.
 
 ## 0.61.2
 

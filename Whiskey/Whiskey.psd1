@@ -83,7 +83,6 @@
                             'ConvertFrom-WhiskeyContext'
                             'ConvertFrom-WhiskeyYamlScalar',
                             'ConvertTo-WhiskeyContext',
-                            'ConvertTo-WhiskeySemanticVersion',
                             'Convert-WhiskeyPathDirectorySeparator',
                             'Get-WhiskeyApiKey',
                             'Get-WhiskeyTask',
