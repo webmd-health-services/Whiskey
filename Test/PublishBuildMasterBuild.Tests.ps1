@@ -8,181 +8,91 @@ BeforeAll {
     & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
     $script:testRoot = $null
-    $script:mockBuild = [pscustomobject]@{ }
-    $script:mockRelease = [pscustomobject]@{ }
-    $script:buildVersion = 'version'
-    $script:defaultApiKeyID = 'BuildMaster'
-    $script:defaultApiKey = 'fubarsnafu'
-    $script:defaultAppName = 'application'
-    $script:defaultReleaseId = 483
-    $script:buildVariable = @{ 'Variable' = @{ 'One' = 'Two'; 'Three' = 'Four'; } }
-    $script:context = $null
     $script:version = $null
-    $script:releaseName = $null
-    $script:appName = $null
-    $script:taskParameter = $null
-    $script:releaseId = $null
-    $script:apiKeyID = $null
     $script:apiKey = $null
-    $script:url = $null
-    $script:buildNumber = $null
-    $script:startAtStage = $null
-    $script:skipDeploy = $null
+    $script:apiKeyID = $null
+    $script:release = $null
 
-    function GivenNoApiKey
+    function GivenApiKey
     {
         param(
-            $ID,
-            $ApiKey
+            [String] $Key,
+            [String] $WithID
         )
 
-        $script:apiKeyID = $null
-        $script:ApiKey = $null
+        $script:apiKey = $Key
+        $script:apiKeyID = $WithID
     }
 
-    function GivenNoApplicationName
-    {
-        $script:appName = $null
-    }
-
-    function GivenNoReleaseName
-    {
-        $script:releaseName = $null
-    }
-
-    function GivenNoRelease
+    function GivenRelease
     {
         param(
-            [Parameter(Mandatory,Position=0)]
-            [String]$Name,
-            [Parameter(Mandatory)]
-            [String]$ForApplication
+            [String] $Named,
+            [String] $InApplication,
+            [int] $WithID
         )
 
-        $script:appName = $ForApplication
-        $script:releaseId = $null
+        $script:release =
+            [pscustomobject]@{ applicationName = $InApplication; name = $Named; id = $WithID; releaseName = $Named; }
     }
 
-    function GivenNoUrl
-    {
-        $script:url = $null
-    }
-
-    function GivenProperty
+    function GivenVersion
     {
         param(
-            [Parameter(Mandatory,Position=0)]
-            $Property
+            [String] $Version
         )
 
-        $script:taskParameter = $Property
-    }
-
-    function GivenBuildNumber
-    {
-        param(
-            [Parameter(Mandatory,Position=0)]
-            $Name
-        )
-
-        $script:buildNumber = $Name
-    }
-
-    function GivenStartAtStage
-    {
-        param(
-            [Parameter(Mandatory,Position=0)]
-            $Stage
-        )
-
-        $script:startAtStage = $Stage
-    }
-
-    function GivenSkipDeploy
-    {
-        param(
-        )
-
-        $script:skipDeploy = 'true'
+        $script:version = $Version
     }
 
     function WhenCreatingBuild
     {
         [CmdletBinding()]
         param(
+            [hashtable] $WithProperties = @{}
         )
 
-        if( -not $taskParameter )
-        {
-            $taskParameter = @{ }
-        }
-
-        if( $appName )
-        {
-            $taskParameter['ApplicationName'] = $appName
-        }
-
-        if( $releaseName )
-        {
-            $taskParameter['ReleaseName'] = $releaseName
-        }
-
-        $script:context = New-WhiskeyTestContext -ForVersion $version `
-                                                -ForTaskName 'PublishBuildMasterBuild' `
-                                                -ForBuildServer `
-                                                -ForBuildRoot $testRoot `
-                                                -IncludePSModule 'BuildMasterAutomation'
+        $context = New-WhiskeyTestContext -ForVersion $script:version `
+                                                 -ForTaskName 'PublishBuildMasterBuild' `
+                                                 -ForBuildServer `
+                                                 -ForBuildRoot $testRoot `
+                                                 -IncludePSModule 'BuildMasterAutomation'
 
         if( -not (Get-Module 'BuildMasterAutomation') )
         {
             Import-WhiskeyTestModule -Name 'BuildMasterAutomation'
         }
 
-        if( $apiKeyID )
+        if ($script:apiKey)
         {
-            $taskParameter['ApiKeyID'] = $apiKeyID
-            Add-WhiskeyApiKey -Context $context -ID $apiKeyID -Value $apiKey
+            Add-WhiskeyApiKey -Context $context -ID $script:apiKeyID -Value $script:apiKey
         }
 
-        if( $url )
-        {
-            $taskParameter['Url'] = $url
-        }
+        $mockRelease = $script:release
 
-        if( $script:buildNumber )
-        {
-            $taskParameter['BuildNumber'] = $script:buildNumber
-        }
-
-        if( $startAtStage )
-        {
-            $taskParameter['StartAtStage'] = $startAtStage
-        }
-
-        if( $skipDeploy )
-        {
-            $taskParameter['SkipDeploy'] = $skipDeploy
-        }
-
-        $build = $script:mockBuild
-        $release = [pscustomobject]@{ Application = $appName; Name = $releaseName; id = $releaseId  }
-
-        if( $releaseId )
-        {
-            Mock -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -MockWith { return $release  }.GetNewClosure()
-        }
-        else
-        {
-            Mock -CommandName 'Get-BMRelease' -ModuleName 'Whiskey' -MockWith { }
-        }
-        Mock -CommandName 'New-BMBuild' -ModuleName 'Whiskey' -MockWith { return [pscustomobject]@{ Release = $Release; BuildNumber = $BuildNumber; Variable = $Variable } }
-        Mock -CommandName 'Publish-BMReleaseBuild' -ModuleName 'Whiskey' -MockWith { return [pscustomobject]@{ Build = $build } }
+        Mock -CommandName 'Get-BMRelease' `
+             -ModuleName 'Whiskey' `
+             -MockWith {
+                    if ($mockRelease -and `
+                        $Release -eq $mockRelease.name -and `
+                        $Application -eq $mockRelease.applicationName)
+                    {
+                        return $mockRelease
+                    }
+                    return $null
+                }
+        Mock -CommandName 'New-BMBuild' `
+             -ModuleName 'Whiskey' `
+             -MockWith { return [pscustomobject]@{ Release = $Release; BuildNumber = $BuildNumber; Variable = $Variable } }
+        Mock -CommandName 'Publish-BMReleaseBuild' `
+             -ModuleName 'Whiskey' `
+             -MockWith { return [pscustomobject]@{ Build = $build } }
 
         $script:threwException = $false
         try
         {
             $Global:Error.Clear()
-            Invoke-WhiskeyTask -TaskContext $context -Name 'PublishBuildMasterBuild' -Parameter $taskParameter
+            Invoke-WhiskeyTask -TaskContext $context -Name 'PublishBuildMasterBuild' -Parameter $WithProperties
         }
         catch
         {
@@ -196,42 +106,47 @@ BeforeAll {
         [CmdletBinding()]
         param(
             [Parameter(Mandatory,Position=0)]
-            [String]$Name,
+            [String] $Name,
 
             [Parameter(Mandatory)]
-            [String]$InRelease,
+            [switch] $InRelease,
 
             [Parameter(Mandatory)]
-            [String]$ForApplication,
+            [String] $AtUrl,
 
             [Parameter(Mandatory)]
-            [String]$AtUrl,
+            [String] $UsingApiKey,
 
-            [Parameter(Mandatory)]
-            [String]$UsingApiKey,
-
-            [Parameter(Mandatory)]
-            [hashtable]$WithVariables
+            [hashtable] $WithVariables
         )
 
-        Should -Invoke 'New-BMBuild' -ModuleName 'Whiskey' -ParameterFilter { $BuildNumber -eq $Name }
-        Should -Invoke 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Name -eq $InRelease }
-        Should -Invoke 'New-BMBuild' -ModuleName 'Whiskey' -ParameterFilter { $Release.id -eq $releaseId }
-        Should -Invoke 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Application -eq $ForApplication }
         Should -Invoke 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Session.Uri -eq $AtUrl }
-        Should -Invoke 'New-BMBuild' -ModuleName 'Whiskey' -ParameterFilter { $Session.Uri -eq $AtUrl }
         Should -Invoke 'Get-BMRelease' -ModuleName 'Whiskey' -ParameterFilter { $Session.ApiKey -eq $UsingApiKey }
-        Should -Invoke 'New-BMBuild' -ModuleName 'Whiskey' -ParameterFilter { $Session.ApiKey -eq $UsingApiKey }
 
-        foreach( $variableName in $WithVariables.Keys )
+        $mockRelease = $script:release
+        Should -Invoke 'New-BMBuild' -ModuleName 'Whiskey' -ParameterFilter { $BuildNumber -eq $Name }
+        if ($InRelease)
         {
-            $variableValue = $WithVariables[$variableName]
-            Should -Invoke 'New-BMBuild' -ModuleName 'Whiskey' -ParameterFilter {
-                # $DebugPreference = 'Continue'
-                Write-WhiskeyDebug ('Expected  {0}' -f $variableValue)
-                Write-WhiskeyDebug ('Actual    {0}' -f $Variable[$variableName])
-                $Variable.ContainsKey($variableName) -and $Variable[$variableName] -eq $variableValue
+            Should -Invoke 'New-BMBuild' -ModuleName 'Whiskey' -ParameterFilter { [Object]::ReferenceEquals($Release, $mockRelease) }
+            Should -Invoke 'New-BMBuild' -ModuleName 'Whiskey' -ParameterFilter { $Session.Uri -eq $AtUrl }
+        }
+        Should -Invoke 'New-BMBuild' -ModuleName 'Whiskey' -ParameterFilter { $Session.ApiKey -eq $UsingApiKey }
+        if ($WithVariables)
+        {
+            foreach( $variableName in $WithVariables.Keys )
+            {
+                $variableValue = $WithVariables[$variableName]
+                Should -Invoke 'New-BMBuild' -ModuleName 'Whiskey' -ParameterFilter {
+                    # $DebugPreference = 'Continue'
+                    Write-WhiskeyDebug ('Expected  {0}' -f $variableValue)
+                    Write-WhiskeyDebug ('Actual    {0}' -f $Variable[$variableName])
+                    $Variable.ContainsKey($variableName) -and $Variable[$variableName] -eq $variableValue
+                }
             }
+        }
+        else
+        {
+            Should -Invoke 'New-BMBuild' -ModuleName 'Whiskey' -ParameterFilter { $null -eq $Variable -or $Variable.Count -eq 0 }
         }
 
         # Pester 5 doesn't set preference variables, so until https://github.com/pester/Pester/issues/2255 is fixed,
@@ -311,19 +226,11 @@ BeforeAll {
 
 Describe 'PublishBuildMasterBuild' {
     BeforeEach {
-        $script:version = '9.8.3-rc.1+build.deadbee'
-        $script:appName = $defaultAppName
-        $script:releaseName = 'release'
-        $script:url = 'https://buildmaster.example.com'
-        $script:apiKeyID = $defaultApiKeyID
-        $script:apiKey = $defaultApiKey
-        $script:releaseId = $defaultReleaseId
-        $script:buildVariable = @{ 'Variable' = @{ 'One' = 'Two'; 'Three' = 'Four'; } }
-        $script:taskParameter = @{ }
-        $script:buildNumber = $null
-        $script:startAtStage = $null
-        $script:skipDeploy = 'false'
+        $script:version = $null
+        $script:apiKeyID = $null
+        $script:apiKey = $null
         $script:testRoot = New-WhiskeyTestRoot
+        $script:release = $null
         $Global:Error.Clear()
     }
 
@@ -332,74 +239,122 @@ Describe 'PublishBuildMasterBuild' {
     }
 
     It 'publishes build' {
-        GivenProperty $script:buildVariable
-        WhenCreatingBuild
-        ThenCreatedBuild '9.8.3' `
-                         -InRelease 'release' `
-                         -ForApplication 'application' `
-                         -AtUrl 'https://buildmaster.example.com' `
-                         -UsingApiKey 'fubarsnafu' `
+        GivenApiKey 'one' -WithID '1'
+        GivenRelease 'release 1' -InApplication 'application 1' -WithID 1
+        GivenVersion '1.1.1-rc.1+1'
+        WhenCreatingBuild -WithProperties @{
+            ApplicationName = 'application 1';
+            ReleaseName = 'release 1';
+            ApiKeyID = '1';
+            Url = 'https://1';
+            Variable = @{ One = 'Two'; Three = 'Four' };
+        }
+        ThenCreatedBuild '1.1.1' `
+                         -InRelease `
+                         -AtUrl 'https://1' `
+                         -UsingApiKey 'one' `
                          -WithVariables @{ One = 'Two'; Three = 'Four' }
-        ThenBuildDeployed -AtUrl 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu'
+        ThenBuildDeployed -AtUrl 'https://1' -UsingApiKey 'one'
     }
 
     It 'publishes build with explicit build number' {
-        $buildNumberOverride = 'PackageABCD'
-        GivenBuildNumber $buildNumberOverride
-        GivenProperty $script:buildVariable
-        WhenCreatingBuild
-        ThenCreatedBuild $buildNumberOverride -InRelease 'release' -ForApplication 'application' -AtUrl 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
-        ThenBuildDeployed -AtUrl 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu'
+        GivenApiKey 'two' -WithID '2'
+        GivenRelease 'release 2' -InApplication 'application 2' -WithID 2
+        GivenVersion '2.2.2-rc.2+2'
+        WhenCreatingBuild -WithProperties @{
+            ApplicationName = 'application 2';
+            ReleaseName = 'release 2';
+            ApiKeyID = '2';
+            Url = 'https://2';
+            BuildNumber = 'my build number';
+        }
+        ThenCreatedBuild 'my build number' `
+                         -InRelease `
+                         -AtUrl 'https://2' `
+                         -UsingApiKey 'two'
+        ThenBuildDeployed -AtUrl 'https://2' -UsingApiKey 'two'
     }
 
     It 'deploys to a specific stage' {
-        $releaseStage = 'Test'
-        GivenStartAtStage $releaseStage
-        GivenProperty $script:buildVariable
-        WhenCreatingBuild
-        ThenCreatedBuild '9.8.3' -InRelease 'release' -ForApplication 'application' -AtUrl 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
-        ThenBuildDeployed -AtUrl 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -AtStage $releaseStage
+        GivenApiKey 'three' -WithID '3'
+        GivenRelease 'release 3' -InApplication 'application 3' -WithID 3
+        GivenVersion '3.3.3-rc.3+3'
+        WhenCreatingBuild -WithProperties @{
+            ApplicationName = 'application 3';
+            ReleaseName = 'release 3';
+            ApiKeyID = '3';
+            Url = 'https://3';
+            StartAtStage = 'Stage 3';
+        }
+        ThenCreatedBuild '3.3.3' `
+                         -InRelease `
+                         -AtUrl 'https://3' `
+                         -UsingApiKey 'three'
+        ThenBuildDeployed -AtUrl 'https://3' -UsingApiKey 'three' -AtStage 'Stage 3'
     }
 
     It 'should publish without starting deploy' {
-        GivenSkipDeploy
-        GivenProperty $script:buildVariable
-        WhenCreatingBuild
-        ThenCreatedBuild '9.8.3' -InRelease 'release' -ForApplication 'application' -AtUrl 'https://buildmaster.example.com' -UsingApiKey 'fubarsnafu' -WithVariables @{ One = 'Two'; Three = 'Four' }
+        GivenApiKey 'four' -WithID '4'
+        GivenRelease 'release 4' -InApplication 'application 4' -WithID 4
+        GivenVersion '4.4.4-rc.4+4'
+        WhenCreatingBuild -WithProperties @{
+            ApplicationName = 'application 4';
+            ReleaseName = 'release 4';
+            ApiKeyID = '4';
+            Url = 'https://4';
+            SkipDeploy = 'true';
+        }
+        ThenCreatedBuild '4.4.4' `
+                         -InRelease `
+                         -AtUrl 'https://4' `
+                         -UsingApiKey 'four'
         ThenBuildNotDeployed
     }
 
     It 'should require an application and release' {
-        GivenNoRelease 'release' -ForApplication 'application'
-        WhenCreatingBuild -ErrorAction SilentlyContinue
+        GivenVersion '5.5.5-rc.5+5'
+        GivenApiKey 'five' -WithID '5'
+        WhenCreatingBuild -WithProperties @{
+            ApplicationName = 'application 5';
+            ReleaseName = 'release 5';
+            Url = 'https://5';
+            ApiKeyID = '5';
+        } -ErrorAction SilentlyContinue
         ThenBuildNotCreated
         ThenTaskFails 'unable\ to\ create\ and\ deploy\ a\ release\ build'
     }
 
     It 'should require ApplicationName property' {
-        GivenNoApplicationName
-        WhenCreatingBuild -ErrorAction SilentlyContinue
+        GivenVersion '6.6.6-rc.6+6'
+        WhenCreatingBuild -WithProperties @{} -ErrorAction SilentlyContinue
         ThenBuildNotCreated
         ThenTaskFails ('\bApplicationName\b.*\bmandatory\b')
     }
 
     It 'should require ReleaseName property' {
-        GivenNoReleaseName
-        WhenCreatingBuild -ErrorAction SilentlyContinue
+        GivenVersion '7.7.7-rc.7+7'
+        WhenCreatingBuild -WithProperties @{ ApplicationName = 'application 7'; } -ErrorAction SilentlyContinue
         ThenBuildNotCreated
         ThenTaskFails ('\bReleaseName\b.*\bmandatory\b')
     }
 
     It 'requires Url property' {
-        GivenNoUrl
-        WhenCreatingBuild -ErrorAction SilentlyContinue
+        GivenVersion '8.8.8-rc.8+8'
+        WhenCreatingBuild -WithProperties @{
+            ApplicationName = 'application 8';
+            ReleaseName = 'application 8';
+        } -ErrorAction SilentlyContinue
         ThenBuildNotCreated
         ThenTaskFails ('\bUrl\b.*\bmandatory\b')
     }
 
-    It 'should require ApiKeyID property' {
-        GivenNoApiKey
-        WhenCreatingBuild -ErrorAction SilentlyContinue
+    It 'requires ApiKeyID property' {
+        GivenVersion '9.9.9-rc.9+9'
+        WhenCreatingBuild -WithProperties @{
+            ApplicationName = 'application 9';
+            ReleaseName = 'application 9';
+            Url = 'https://9';
+        } -ErrorAction SilentlyContinue
         ThenBuildNotCreated
         ThenTaskFails ('\bApiKeyID\b.*\bmandatory\b')
     }
