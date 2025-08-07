@@ -91,6 +91,9 @@ If a task has conditions, variable evaluation on the task's properties only happ
 The `PublishBuildMasterBuild` can now publish builds to applications that don't use releases or that have optional
 releases. Use the new  `PipelineName` property instead of the `ReleaseName` property.
 
+Support to the `Version` task for date-based version numbers. Use the new `DateFormat` property to specifiy a .NET date
+format string to use to create a version number from the current date.
+
 #### InstallNodeJs Task
 
 The `InstallNodeJs` task now looks up the Node.js version to install from a ".node-version" file, if a version isn't
