@@ -3,7 +3,19 @@
 
 # Whiskey Changelog
 
+## 0.61.2
+
+Fixed: MSBuild, NUnit2, and NUnit3 tasks fail on build servers with nuget.org as a NuGet source. Whiskey was using
+PowerShell's Package Management module to install NuGet package dependencies and the Package Management module doesn't
+work with nuget.org anymore.
+
+Whiskey now uses the NuGet v3 API to discover and download NuGet packages required by build tasks. Task authors
+whose tasks use Whiskey's `Whiskey.RequiresNuGetPackage` attribute are encouraged to test that their tasks work with
+this change.
+
 ## 0.61.1
+
+> Released 23 Jan 2025
 
 * Fixed: the `NuGetPush` task leaks NuGet API key to the information stream.
 * Fixed: the `NuGetPush` task doesn't allow NuGet to use credentials stored in the NuGet.config file.
