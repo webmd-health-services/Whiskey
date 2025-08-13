@@ -279,7 +279,7 @@ BeforeAll {
                 $result | Should -Not -Exist
             }
             # $Error has nuget.exe's STDERR depending on your console.
-            $Global:Error.Count | Should -BeLessThan 9
+            $Global:Error | Should -Not -BeNullOrEmpty
             if( $ExpectedError )
             {
                 $Global:Error[0] | Should -Match $ExpectedError
@@ -318,7 +318,7 @@ Describe 'Install-WhiskeyTool' {
         }
 
         It 'should validate version' {
-            Invoke-NugetInstall -package 'Nunit.Runners' -version '0.0.0' -invalidPackage -ErrorAction silentlyContinue
+            Invoke-NugetInstall -package 'Nunit.Runners' -version '0.0.1' -invalidPackage -ErrorAction silentlyContinue
         }
 
         It 'should install the latest version' {

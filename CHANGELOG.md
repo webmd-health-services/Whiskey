@@ -223,6 +223,16 @@ of Node.js to install. Instead, it uses the `Version` task property. If that isn
 ".node-version" file in the build directory. If that file doesn't exist, it uses the `whiskey.node` property in the
 "package.json" file. Otherwise, it installs the latest LTS version.
 
+## 0.61.2
+
+Fixed: MSBuild, NUnit2, and NUnit3 tasks fail on build servers with nuget.org as a NuGet source. Whiskey was using
+PowerShell's Package Management module to install NuGet package dependencies and the Package Management module doesn't
+work with nuget.org anymore.
+
+Whiskey now uses the NuGet v3 API to discover and download NuGet packages required by build tasks. Task authors
+whose tasks use Whiskey's `Whiskey.RequiresNuGetPackage` attribute are encouraged to test that their tasks work with
+this change.
+
 ## 0.61.1
 
 * Fixed: the `NuGetPush` task leaks NuGet API key to the information stream.
