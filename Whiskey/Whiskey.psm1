@@ -66,7 +66,7 @@ if( $net4Key -and $net4Key.Release -le $net462Release )
     $frameworkMoniker = 'net452'
 }
 
-foreach( $assemblyBaseName in @('SemanticVersion', 'YamlDotNet', 'Whiskey') )
+foreach( $assemblyBaseName in @('NuGet.Versioning', 'SemanticVersion', 'YamlDotNet', 'Whiskey') )
 {
     $assemblyPath = Join-Path -Path $whiskeyBinPath -ChildPath $frameworkMoniker
     $assemblyPath = Join-Path -Path $assemblyPath -ChildPath "$($assemblyBaseName).dll"

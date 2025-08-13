@@ -64,8 +64,14 @@ for:
         {
             # $Global:Error | Format-List * -Force
         }
-#   on_finish:
-#   - ps: $blockRdp = $true; $nonat = $false ; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+  on_finish:
+  - ps: |
+      if ((Test-Path -Path 'env:ENABLE_RDP') -and $env:ENABLE_RDP -eq 'True')
+      {
+        $blockRdp = $true
+        $nonat = $false
+        iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+      }
 
 # Build in PowerShell
 - matrix:
@@ -83,5 +89,11 @@ for:
         {
             # $Global:Error | Format-List * -Force
         }
-#   on_finish:
-#   - ps: $blockRdp = $true; $nonat = $true ; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+  on_finish:
+  - ps: |
+      if ((Test-Path -Path 'env:ENABLE_RDP') -and $env:ENABLE_RDP -eq 'True')
+      {
+        $blockRdp = $true
+        $nonat = $false
+        iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+      }

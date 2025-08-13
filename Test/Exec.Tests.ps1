@@ -477,7 +477,9 @@ Describe 'Exec' {
     # Discovered in issue where `npm intall rimraf -g` got exeuted as `npm "install rimraf -g"` because PowerShell
     # resolved the npm command to npm.ps1, which got introduced in Node.js 22.
     It 'handles when command is a PowerShell script' {
-        Invoke-WhiskeyTask -TaskContext $script:context -Name 'InstallNodeJs' -Parameter @{ Version = '22' }
+        # TODO: once a version of Node.js is published that uses NPM 11.5.3 or later, change Version to pin back to 22.
+        # See https://github.com/npm/cli/issues/8468
+        Invoke-WhiskeyTask -TaskContext $script:context -Name 'InstallNodeJs' -Parameter @{ Version = '22.17' }
         $npmCmd = Get-Command -Name 'npm'
         $npmCmd | Should -Not -BeNullOrEmpty
         # Only run on platforms that ship with npm.ps1 *and* that resolves *.ps1 scripts as commands.
