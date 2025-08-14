@@ -227,6 +227,9 @@ The `Uri` property on the `NuGetPush`, `PublishBitbucketServerTag`, and `Publish
 ### Fixed
 
 * Complex object values get set to an empty string when passed to a task.
+* Builds can silently fail if the last task run by Whiskey runs a command that returns a non-zero exit code. PowerShell
+  uses the last exit code of the last command run as its exit code. Whiskey now resets the last exit code after each
+  task is run. The proper way for a task to fail a build is to throw a terminating error by calling `Stop-WhiskeyError`.
 
 ### Removed
 

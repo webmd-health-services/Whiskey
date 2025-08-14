@@ -583,3 +583,21 @@ function GenerateOutpuTaskWithCmdletBinding
 
     $Output
 }
+
+function RunsCommandThatSetsLastExitCodeTo1
+{
+    [CmdletBinding()]
+    [Whiskey.Task('RunsCommandThatSetsLastExitCodeTo1')]
+    param(
+
+    )
+
+    if ($PSVersionTable['Edition'] -eq 'Core')
+    {
+        pwsh '-NoProfile' '-NonInteractive' '-Command' 'exit 1'
+    }
+    else
+    {
+        powershell '-NoProfile' '-NonInteracive' '-Command' 'exit 1'
+    }
+}
