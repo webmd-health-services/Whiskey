@@ -592,12 +592,14 @@ function RunsCommandThatSetsLastExitCodeTo1
 
     )
 
+    # Have to run powershell via Invoke-Expression otherwise when run by our Test-Whiskey.ps1 script, the commands fails
+    # with an error that '-NonInteractive' is not a command.
     if ($PSVersionTable['Edition'] -eq 'Core')
     {
-        pwsh '-NoProfile' '-NonInteractive' '-Command' 'exit 1'
+        Invoke-Expression 'pwsh -NoProfile -NonInteractive -Command ''exit 1'''
     }
     else
     {
-        powershell '-NoProfile' '-NonInteracive' '-Command' 'exit 1'
+        Invoke-Expression 'powershell -NoProfile -NonInteractive -Command ''exit 1'''
     }
 }

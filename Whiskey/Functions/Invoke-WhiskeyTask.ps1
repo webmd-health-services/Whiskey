@@ -361,6 +361,7 @@ function Invoke-WhiskeyTask
 
             $outVarName = $taskProperties['OutVariable']
 
+            Write-WhiskeyDebug "Calling task ${Name}."
             # If the task doesn't have the [CmdletBinding()] parameter, fake it with Tee-Object.
             if ($outVarName -and -not $taskArgs.ContainsKey('OutVariable'))
             {

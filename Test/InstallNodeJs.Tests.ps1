@@ -264,7 +264,7 @@ BeforeAll {
 
 AfterAll {
     $pathSeparator = [IO.Path]::PathSeparator
-    $env:Path = ($env:Path -split $pathSeparator | Where-Object { Test-Path -Path $_ }) -join $pathSeparator
+    $env:Path = ($env:Path -split $pathSeparator | Where-Object { $_ } | Where-Object { Test-Path -Path $_ }) -join $pathSeparator
 }
 
 Describe 'InstallNodeJs' {
