@@ -2,6 +2,12 @@
 #Require -Version 5.1
 Set-StrictMode -Version 'Latest'
 
+if ((Test-Path -Path 'variable:IsWindows') -and -not $IsWindows)
+{
+    Write-Warning 'MSBuild tests are only runnable on Windows.'
+    return
+}
+
 BeforeAll {
     Set-StrictMode -Version 'Latest'
 

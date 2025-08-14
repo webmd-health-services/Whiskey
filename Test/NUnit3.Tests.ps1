@@ -1,5 +1,11 @@
 Set-StrictMode -Version 'Latest'
 
+if ((Test-Path -Path 'variable:IsWindows') -and -not $IsWindows)
+{
+    Write-Warning 'NUnit3 tests are only runnable on Windows.'
+    return
+}
+
 BeforeAll {
     & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
