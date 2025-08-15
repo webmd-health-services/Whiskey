@@ -48,20 +48,9 @@ BeforeAll {
     function ThenDidNotFail
     {
         param(
-            [Switch] $AndPublishedTestResult
         )
 
         $script:failed | Should -Be $false
-
-        if( $AndPublishedTestResult )
-        {
-            Join-Path -Path $script:context.OutputDirectory -ChildPath 'pester*.xml' | Should -Exist
-            Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
-        }
-        else
-        {
-            Assert-MockCalled -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey' -Times 0
-        }
     }
 
     function ThenFailed
@@ -85,8 +74,6 @@ BeforeAll {
 
         $script:failed = $false
         $Global:Error.Clear()
-
-        Mock -CommandName 'Publish-WhiskeyPesterTestResult' -ModuleName 'Whiskey'
 
         $script:context = New-WhiskeyTestContext -ForDeveloper `
                                                 -ConfigurationPath $script:whiskeyYamlPath `

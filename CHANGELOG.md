@@ -17,6 +17,10 @@
 * The `PublishBuildMasterBuild` task now supports publishing builds to applications that don't have releases or where
   releases are optional. Release-less builds must be assigned a pipeline, so use the new `PipelineName` property.
 * Remove usages of `ConvertTo-WhiskeySemanticVersion` helper function. Use the `Version` task in your builds instead.
+* Whiskey no longer automatically publishes Pester test results to AppVeyor when running under that platform.
+  [AppVeyor's documentation shows how to add this to your
+  build.](https://www.appveyor.com/docs/running-tests/#uploading-xml-test-results) Pester outputs results in `nunit`
+  format.
 
 #### Rename Common Properties
 
@@ -242,6 +246,12 @@ of Node.js to install. Instead, it uses the `Version` task property. If that isn
 "package.json" file. Otherwise, it installs the latest LTS version.
 
 The `ConvertTo-WhiskeySemanticVersion` helper function. Use the `Version` task in your builds instead.
+
+The `Pester` and `Pester4` tasks no longer post test results automatically to AppVeyor when a build is running under
+that platform. [AppVeyor's documentation shows how to add this to your
+build.](https://www.appveyor.com/docs/running-tests/#uploading-xml-test-results) Pester outputs results in `nunit`
+format.
+
 
 ## 0.61.2
 
