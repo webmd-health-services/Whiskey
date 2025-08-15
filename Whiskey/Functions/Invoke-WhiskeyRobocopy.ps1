@@ -17,11 +17,7 @@ function Invoke-WhiskeyRobocopy
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
-    $numRobocopyThreads =
-        Get-CimInstance -ClassName 'Win32_Processor' |
-        Select-Object -ExpandProperty 'NumberOfLogicalProcessors' |
-        Measure-Object -Sum | Select-Object -ExpandProperty 'Sum'
-    $numRobocopyThreads *= 2
+    $numRobocopyThreads = [Environment]::ProcessorCount * 2
 
     $logPathFileName = "robocopy-$([IO.Path]::GetRandomFileName() -replace '\.','').log"
     $logPath = Join-Path -Path (Get-WhiskeyTempPath) -ChildPath $logPathFileName

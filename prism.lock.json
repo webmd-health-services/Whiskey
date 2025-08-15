@@ -1,18 +1,33 @@
 {
   "PSModules": [
     {
+      "name": "BitbucketServerAutomation",
+      "version": "0.9.0",
+      "repositorySourceLocation": "https://www.powershellgallery.com/api/v2"
+    },
+    {
       "name": "BuildMasterAutomation",
-      "version": "0.6.0",
+      "version": "4.2.0",
+      "repositorySourceLocation": "https://www.powershellgallery.com/api/v2"
+    },
+    {
+      "name": "Glob",
+      "version": "0.1.1",
+      "repositorySourceLocation": "https://www.powershellgallery.com/api/v2"
+    },
+    {
+      "name": "Pester",
+      "version": "5.4.1",
+      "repositorySourceLocation": "https://www.powershellgallery.com/api/v2"
+    },
+    {
+      "name": "Pester",
+      "version": "4.10.1",
       "repositorySourceLocation": "https://www.powershellgallery.com/api/v2"
     },
     {
       "name": "ProGetAutomation",
-      "version": "3.0.0",
-      "repositorySourceLocation": "https://www.powershellgallery.com/api/v2"
-    },
-    {
-      "name": "BitbucketServerAutomation",
-      "version": "0.9.0",
+      "version": "3.1.0",
       "repositorySourceLocation": "https://www.powershellgallery.com/api/v2"
     },
     {
@@ -23,21 +38,6 @@
     {
       "name": "Zip",
       "version": "0.3.2",
-      "repositorySourceLocation": "https://www.powershellgallery.com/api/v2"
-    },
-    {
-      "name": "Pester",
-      "version": "5.4.1",
-      "repositorySourceLocation": "https://www.powershellgallery.com/api/v2"
-    },
-    {
-      "name": "Pester",
-      "version": "3.4.6",
-      "repositorySourceLocation": "https://www.powershellgallery.com/api/v2"
-    },
-    {
-      "name": "Glob",
-      "version": "0.1.1",
       "repositorySourceLocation": "https://www.powershellgallery.com/api/v2"
     }
   ]

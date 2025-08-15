@@ -14,6 +14,8 @@ function Set-WhiskeyVersion
 
         [String] $Version,
 
+        [String] $DateFormat,
+
         [Object] $Prerelease,
 
         [String] $Build,
@@ -80,6 +82,13 @@ function Set-WhiskeyVersion
         }
     }
 
+    if ($Version -and $DateFormat)
+    {
+        $msg = 'Properties "Version" and "DateFormat" are mutually exclusive. Use one or the other but not both.'
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
+        return
+    }
+
     [int]$nextPrereleaseVersion = 1
     [Whiskey.BuildVersion]$buildVersion = $TaskContext.Version
     [SemVersion.SemanticVersion]$semver = $buildVersion.SemVer2
@@ -90,6 +99,33 @@ function Set-WhiskeyVersion
     {
         $rawVersion = $Version
         $semVer = $rawVersion | ConvertTo-SemVer -PropertyName 'Version'
+    }
+    elseif ($DateFormat)
+    {
+        $rawVersion = Get-Date $TaskContext.StartedAt -Format $DateFormat
+        if (-not $rawVersion)
+        {
+            $msg = "Failed to get date-based version number from .NET date format string ""${DateFormat}""."
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
+            return
+        }
+
+        # Trim any leading zeroes from each of the version parts since semantic versioning doesn't allow leading zeros.
+        $parts = $rawVersion.Split('.')
+        for ($idx = 0; $idx -lt $parts.Length; ++$idx)
+        {
+            $part = $parts[$idx].TrimStart('0')
+            if (-not $part)
+            {
+                $part = '0'
+            }
+            $parts[$idx] = $part
+        }
+        $rawVersion = $parts -join '.'
+
+        $semVer =
+            $rawVersion |
+            ConvertTo-SemVer -PropertyName 'DateFormat' -VersionSource "from date format ""${DateFormat}"""
     }
     else
     {

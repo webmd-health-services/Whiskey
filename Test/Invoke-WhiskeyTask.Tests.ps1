@@ -525,6 +525,7 @@ Describe 'Invoke-WhiskeyTask' {
         $script:taskNameForPlugin = $null
         $script:taskRunCount = 0
         $script:testRoot = New-WhiskeyTestRoot
+        $Global:Error.Clear()
     }
 
     AfterAll {
@@ -1282,5 +1283,12 @@ Describe 'Invoke-WhiskeyTask' {
         WhenRunningTask 'Log' -Parameter @{ Message = '$(I_DO_NOT_EXIST)' ; '.IfExists' = 'env:FUBAR_SNAFU' }
         ThenPipelineSucceeded
     }
-}
 
+    It 'resets LASTEXITCODE for successful tasks' {
+        $Global:LASTEXITCODE = 0
+        $Global:LASTEXITCODE | Should -Be 0
+        WhenRunningTask 'RunsCommandThatSetsLastExitCodeTo1'
+        ThenPipelineSucceeded
+        $Global:LASTEXITCODE | Should -Be 0
+    }
+}

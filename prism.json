@@ -2,7 +2,7 @@
     "PSModules": [
         {
             "Name": "BuildMasterAutomation",
-            "Version": "0.6.*"
+            "Version": "4.2.*"
         },
         {
             "Name": "ProGetAutomation",
@@ -26,7 +26,7 @@
         },
         {
             "Name": "Pester",
-            "Version": "3.*"
+            "Version": "4.*"
         },
         {
             "Name": "Glob",

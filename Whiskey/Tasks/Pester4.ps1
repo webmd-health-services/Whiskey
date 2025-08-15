@@ -193,8 +193,6 @@ function Invoke-WhiskeyPester4Task
         Select-Object -First $ItDurationReportCount |
         Format-Table -AutoSize -Property 'Describe','Name','Time'
 
-    Publish-WhiskeyPesterTestResult -Path $outputFile
-
     $outputFileContent = Get-Content -Path $outputFile -Raw
     $outputFileContent | Write-WhiskeyDebug
     $result = [xml]$outputFileContent
