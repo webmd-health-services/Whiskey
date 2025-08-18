@@ -36,7 +36,6 @@ function Complete-Job
 
 $pester4Tests = @(
     'Add-WhiskeyApiKey.Tests.ps1',
-    'Add-WhiskeyTaskDefault.Tests.ps1',
     'AppVeyorWaitForBuildJobs.Tests.ps1',
     'Convert-WhiskeyPathDirectorySeparator.Tests.ps1',
     'ConvertFrom-WhiskeyContext.Tests.ps1',
