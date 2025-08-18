@@ -150,7 +150,7 @@ Describe 'Add-WhiskeyTaskDefault' {
         GivenPropertyName 'Version'
         GivenValue 12.0
         WhenAddingTaskDefault -ErrorAction SilentlyContinue
-        ThenFailedWithError 'Task ''NotARealTask'' does not exist.'
+        ThenFailedWithError 'Task "NotARealTask" does not exist.'
     }
 
     It 'prevents duplicate defaults' {

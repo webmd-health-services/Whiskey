@@ -52,9 +52,18 @@ function Add-WhiskeyTaskDefault
         throw 'The given ''Context'' object does not contain a ''TaskDefaults'' property. Create a proper Whiskey context object using the ''New-WhiskeyContext'' function.'
     }
 
-    if ($TaskName -notin (Get-WhiskeyTask | Select-Object -ExpandProperty 'Name'))
+    $tasks = Get-WhiskeyTask
+    if ($TaskName -notin ($tasks | Select-Object -ExpandProperty 'Name'))
     {
-        throw 'Task ''{0}'' does not exist.' -f $TaskName
+        $task = $tasks | Where-Object 'Aliases' -Contains $TaskName
+        if ($task)
+        {
+            $TaskName = $task.Name
+        }
+        else
+        {
+            throw "Task ""${TaskName}"" does not exist."
+        }
     }
 
     if ($context.TaskDefaults.ContainsKey($TaskName))
