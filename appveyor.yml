@@ -53,7 +53,7 @@ for:
     only:
     - job_group: ps
   build_script:
-  - ps: |
+  - ps: &build_script |
         dir env:
         try
         {
@@ -65,7 +65,22 @@ for:
             # $Global:Error | Format-List * -Force
         }
   on_finish:
-  - ps: |
+  - ps: &on_finish |
+      Get-ChildItem 'env:'
+      if (-not (Test-Path -Path 'env:APPVEYOR_JOB_ID'))
+      {
+        Write-Error "Missing APPVEYOR_JOB_ID env var."
+        exit
+      }
+      $jobID = $env:APPVEYOR_JOB_ID
+      $files = Resolve-Path -Path .\.output\pester-*.xml
+      $files | Format-Table
+      $wc = New-Object 'System.Net.WebClient'
+      foreach ($file in $files)
+      {
+        Get-Item -Path $file
+        $wc.UploadFile("https://ci.appveyor.com/api/testresults/nunit/${jobID}", $file)
+      }
       if ((Test-Path -Path 'env:ENABLE_RDP') -and $env:ENABLE_RDP -eq 'True')
       {
         $blockRdp = $true
@@ -78,22 +93,6 @@ for:
     only:
     - job_group: pwsh
   build_script:
-  - pwsh: |
-        dir env:
-        try
-        {
-            iwr https://raw.githubusercontent.com/webmd-health-services/Prism/main/Scripts/init.ps1 | iex | Format-Table
-            ./build.ps1
-        }
-        finally
-        {
-            # $Global:Error | Format-List * -Force
-        }
+  - pwsh: *build_script
   on_finish:
-  - ps: |
-      if ((Test-Path -Path 'env:ENABLE_RDP') -and $env:ENABLE_RDP -eq 'True')
-      {
-        $blockRdp = $true
-        $nonat = $false
-        iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
-      }
+  - pwsh: *on_finish

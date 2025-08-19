@@ -51,13 +51,6 @@ function Invoke-WhiskeyPesterTask
     & $cmdName -NoProfile -NonInteractive -File $invokePesterPath -ParameterBase64 $parameterBase64
     Write-WhiskeyDebug "Done     ${cmdName}"
 
-    if( $Configuration.ContainsKey('TestResult') -and `
-        $Configuration['TestResult'] -is [Collections.ICollection] -and `
-        $Configuration['TestResult'].ContainsKey('OutputPath') )
-    {
-        Publish-WhiskeyPesterTestResult -Path $Configuration['TestResult']['OutputPath']
-    }
-
     if (-not (Test-Path -Path $exitCodePath -PathType Leaf))
     {
         Stop-WhiskeyTask -TaskContext $TaskContext -Message "Pester task failed to run tests."

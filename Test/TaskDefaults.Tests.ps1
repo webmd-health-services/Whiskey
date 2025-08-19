@@ -119,7 +119,7 @@ Describe 'TaskDefault' {
     It 'should fail' {
         GivenTaskDefaults @{ 'Version' = 12.0 } -ForTask 'NotARealTask'
         WhenSettingTaskDefaults -ErrorAction SilentlyContinue
-        ThenFailedWithError 'Task ''NotARealTask'' does not exist.'
+        ThenFailedWithError 'Task "NotARealTask" does not exist.'
     }
 
     It 'should set defaults' {
@@ -136,5 +136,11 @@ Describe 'TaskDefault' {
         WhenSettingTaskDefaults
         ThenTaskDefaultsContains -Task 'MSBuild' -Property 'Version' -Value 12.0
         ThenNoErrors
+    }
+ 
+    It 'sets defaults for tasks with aliases' {
+        GivenTaskDefaults @{ 'ApplicationName' = 'aliastask' } -ForTask 'PublishBuildMasterPackage'
+        WhenSettingTaskDefaults
+        ThenTaskDefaultsContains -Task 'PublishBuildMasterBuild' -Property 'ApplicationName' -Value 'aliastask'
     }
 }

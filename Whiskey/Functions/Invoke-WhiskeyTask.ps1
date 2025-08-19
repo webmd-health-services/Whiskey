@@ -361,6 +361,7 @@ function Invoke-WhiskeyTask
 
             $outVarName = $taskProperties['OutVariable']
 
+            Write-WhiskeyDebug "Calling task ${Name}."
             # If the task doesn't have the [CmdletBinding()] parameter, fake it with Tee-Object.
             if ($outVarName -and -not $taskArgs.ContainsKey('OutVariable'))
             {
@@ -370,6 +371,13 @@ function Invoke-WhiskeyTask
             {
                 & $task.CommandName @taskArgs
             }
+
+            # Ignore any command the task might have run that set LASTEXITCODE. PowerShell uses LASTEXITCODE as its exit
+            # code if it is non-zero, so if a task calls a command that sets LASTEXITCODE and the task doesn't care
+            # about the exit code, that behavior can make builds fail without any indication why. The correct way for
+            # task authors to fail a build is to throw an exception/terminating error, preferably using
+            # Stop-WhiskeyTask.
+            $Global:LASTEXITCODE = 0
 
             if ($outVarName)
             {

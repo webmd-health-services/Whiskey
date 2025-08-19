@@ -9,8 +9,18 @@
 
 #### General
 
-Rename usages of the `InstallNode` task to `InstallNodeJs`.
-Rename usages of `PublishBitbucketServerTag` tasks's `Uri` property to `Url`.
+* Rename usages of the `InstallNode` task to `InstallNodeJs`.
+* Rename usages of `PublishBitbucketServerTag` tasks's `Uri` property to `Url`.
+* Rename usages of `PublishBuildMasterPackage` to `PublishBuildMasterBuild` along with these properties:
+  * `PackageVariable` to `Variable`
+  * `PackageName` to `BuildNumber`
+* The `PublishBuildMasterBuild` task now supports publishing builds to applications that don't have releases or where
+  releases are optional. Release-less builds must be assigned a pipeline, so use the new `PipelineName` property.
+* Remove usages of `ConvertTo-WhiskeySemanticVersion` helper function. Use the `Version` task in your builds instead.
+* Whiskey no longer automatically publishes Pester test results to AppVeyor when running under that platform.
+  [AppVeyor's documentation shows how to add this to your
+  build.](https://www.appveyor.com/docs/running-tests/#uploading-xml-test-results) Pester outputs results in `nunit`
+  format.
 
 #### Rename Common Properties
 
@@ -81,6 +91,12 @@ YOu can also use the `npm login` or `npm adduser` commands, which by default wil
 Task output will now appear in the console when using the `.OutVariable` property.
 
 If a task has conditions, variable evaluation on the task's properties only happen if the task runs.
+
+The `PublishBuildMasterBuild` can now publish builds to applications that don't use releases or that have optional
+releases. Use the new  `PipelineName` property instead of the `ReleaseName` property.
+
+Support to the `Version` task for date-based version numbers. Use the new `DateFormat` property to specifiy a .NET date
+format string to use to create a version number from the current date.
 
 #### InstallNodeJs Task
 
@@ -187,6 +203,9 @@ Build:
 
 * The `InstallNode` task renamed to `InstallNodeJs`.
 * Paths passed to build tasks can now be outside the build directory.
+* Renamed `PublishBuildMasterPackage` task to `PublishBuildMasterBuild` along with these properties:
+  * `PackageVariable` to `Variable`
+  * `PackageName` to `BuildNumber`
 
 ### Deprecated
 
@@ -212,6 +231,10 @@ The `Uri` property on the `NuGetPush`, `PublishBitbucketServerTag`, and `Publish
 ### Fixed
 
 * Complex object values get set to an empty string when passed to a task.
+* Builds can silently fail if the last task run by Whiskey runs a command that returns a non-zero exit code. PowerShell
+  uses the last exit code of the last command run as its exit code. Whiskey now resets the last exit code after each
+  task is run. The proper way for a task to fail a build is to throw a terminating error by calling `Stop-WhiskeyError`.
+* `TaskDefaults` task fails to set default properties using task aliases.
 
 ### Removed
 
@@ -222,6 +245,14 @@ The `InstallNodeJs` task no longer uses the `engines.node` property in the "pack
 of Node.js to install. Instead, it uses the `Version` task property. If that isn't given, it uses the version in the
 ".node-version" file in the build directory. If that file doesn't exist, it uses the `whiskey.node` property in the
 "package.json" file. Otherwise, it installs the latest LTS version.
+
+The `ConvertTo-WhiskeySemanticVersion` helper function. Use the `Version` task in your builds instead.
+
+The `Pester` and `Pester4` tasks no longer post test results automatically to AppVeyor when a build is running under
+that platform. [AppVeyor's documentation shows how to add this to your
+build.](https://www.appveyor.com/docs/running-tests/#uploading-xml-test-results) Pester outputs results in `nunit`
+format.
+
 
 ## 0.61.2
 
