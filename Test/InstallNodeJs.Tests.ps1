@@ -5,12 +5,20 @@ Set-StrictMode -Version 'Latest'
 BeforeDiscovery {
     $nodeVersions = Invoke-RestMethod -Uri 'https://nodejs.org/dist/index.json' | ForEach-Object { $_ }
 
+    $ltsVersions = $nodeVersions | Where-Object 'lts' -NE $false
+
     $latestNodeVersion =
-        $nodeVersions |
-        Where-Object{ $_.lts  } |
+        $ltsVersions |
         Select-Object -ExpandProperty version |
         Select-Object -First 1 |
         ForEach-Object { $_.Substring(1) }
+
+    $latestNodeVersionVersion = [Version]::Parse($latestNodeVersion)
+    $script:currentLtsVersions = $currentLtsVersions =
+        $ltsVersions |
+        Group-Object -Property { [Version]::Parse($_.version.TrimStart('v')).Major } |
+        Where-Object 'Name' -EQ $latestNodeVersionVersion.Major |
+        Select-Object -ExpandProperty 'Group'
 }
 
 BeforeAll {
@@ -339,7 +347,7 @@ BeforeAll {
                             $linkType = 'Junction'
                         }
                         New-Item -Path $DestinationPath -ItemType $linkType -Value $cachePath
-                } 
+                }
             }
         Invoke-WhiskeyTask -TaskContext $context -Parameter $parameters -Name 'InstallNodeJs'
     }
@@ -349,8 +357,6 @@ BeforeAll {
         $script:fileCreatedTime.add(((Get-ChildItem -Path $nodePath).CreationTime | Select-Object -ExpandProperty ticks))
         @( $filecreatedTime | Select-Object -Unique ) | Should -HaveCount 1
     }
-
-    Write-Host $TestDrive
 }
 
 AfterAll {
@@ -365,6 +371,19 @@ Describe 'InstallNodeJs' {
         $script:fileCreatedTime = New-Object Collections.ArrayList
         $script:nodePath = Join-Path -Path $script:testRoot -ChildPath '.node'
         $Global:Error.Clear()
+    }
+
+    AfterEach {
+        $longestPath =
+            Get-ChildItem -Path $script:testRoot -Recurse | Sort-Object { $_.FullName.Length } | Select-Object -Last 1
+        if ($longestPath.FullName.Length -gt 260)
+        {
+            $msg = "Test created a file ""$($longestPath.FullName)"" whose path is $($longestPath.FullName.Length) " +
+                   "characters long, which is greater than Windows' max length of 260."
+            Write-Warning $msg
+
+            Invoke-WhiskeyPrivateCommand -Name 'Remove-WhiskeyFileSystemItem' -Parameter @{ Path = $script:testRoot }
+        }
     }
 
     It 'installs latest lts by default' -ForEach $latestNodeVersion {
@@ -461,15 +480,21 @@ Describe 'InstallNodeJs' {
     }
 
     It 'upgrades' {
-        WhenInstallingNode -Version '8.8.1' -NoInstallMock
-        ThenNode -Installed -AtVersion '8.8.1' -AndNpmNotUpdated
+        $firstLtsVersion = $currentLtsVersions | Select-Object -Last 1 | Select-Object -Expand 'version'
+        $firstLtsVersion = $firstLtsVersion.TrimStart('v')
+        $lastLtsVersion = $currentLtsVersions | Select-Object -First 1 | Select-Object -Expand 'version'
+        $lastLtsVersion = $lastLtsVersion.TrimStart('v')
+        $firstLtsVersion | Should -Not -Be $lastLtsVersion
+
+        WhenInstallingNode -Version $firstLtsVersion -NoInstallMock
+        ThenNode -Installed -AtVersion $firstLtsVersion -AndNpmNotUpdated
 
         $path = Join-Path -Path $script:context.BuildRoot -ChildPath '.node\deleteme'
         New-Item -Path $path -ItemType File
         $path | Should -Exist
 
-        WhenInstallingNode -Version '8.9.0' -NoInstallMock
-        ThenNode -Installed -AtVersion '8.9.0' -AndNpmNotUpdated
+        WhenInstallingNode -Version $lastLtsVersion -NoInstallMock
+        ThenNode -Installed -AtVersion $lastLtsVersion -AndNpmNotUpdated
         # Make sure old .node directory gets deleted completely.
         $path | Should -Not -Exist
     }
