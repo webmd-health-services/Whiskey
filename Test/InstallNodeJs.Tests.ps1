@@ -2,6 +2,16 @@
 #Requires -Version 5.1
 Set-StrictMode -Version 'Latest'
 
+BeforeDiscovery {
+    $nodeVersions = Invoke-RestMethod -Uri 'https://nodejs.org/dist/index.json' | ForEach-Object { $_ }
+
+    $latestNodeVersion =
+        $nodeVersions |
+        Where-Object{ $_.lts  } |
+        Select-Object -ExpandProperty version |
+        Select-Object -First 1 |
+        ForEach-Object { $_.Substring(1) }
+}
 
 BeforeAll {
     Set-StrictMode -Version 'Latest'
@@ -152,7 +162,9 @@ BeforeAll {
 
             [String] $AtVersion,
 
-            [String] $WithNpmAtVersion,
+            [String] $WithNpmUpdatedTo,
+
+            [switch] $AndNpmNotUpdated,
 
             [String] $To
         )
@@ -196,9 +208,16 @@ BeforeAll {
             Where-Object 'Source' -EQ $npmPath |
             Should -Not -BeNullOrEmpty
 
-        if ($WithNpmAtVersion)
+        if ($WithNpmUpdatedTo)
         {
-            & $npmPath '--version' | Should -Be $WithNpmAtVersion
+            Should -Invoke 'Invoke-WhiskeyNpmCommand' `
+                   -ModuleName 'Whiskey' `
+                   -ParameterFilter { ($ArgumentList | Select-Object -First 2 | Select-Object -Last 1) -eq "npm@${WithNpmUpdatedTo}" }
+        }
+
+        if ($AndNpmNotUpdated)
+        {
+            Should -Invoke 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey' -Times 0
         }
     }
 
@@ -216,7 +235,9 @@ BeforeAll {
 
             [String] $NpmVersion,
 
-            [String] $Cpu
+            [String] $Cpu,
+
+            [switch] $NoInstallMock
         )
 
         $parameters = @{}
@@ -250,9 +271,77 @@ BeforeAll {
             $parameters['Cpu'] = $Cpu
         }
 
-        Invoke-WhiskeyTask -TaskContext $context `
-                           -Parameter $parameters `
-                           -Name 'InstallNodeJs'
+        $testDirPath = $script:testRoot
+        # Save packages to the same place across tests so we only download each package once.
+        Mock -CommandName 'Save-NodeJsPackage' `
+             -ModuleName 'Whiskey' `
+             -ParameterFilter {
+                $OutputDirectoryPath -eq (Join-Path -Path $testDirPath '.output')
+             } `
+             -MockWith {
+                $saveArgs = @{
+                    Version = $Version;
+                    OutputDirectoryPath = $TestDrive;
+                }
+
+                if ($Cpu)
+                {
+                    $saveArgs['CPU'] = $Cpu
+                }
+
+                InModuleScope -ModuleName 'Whiskey' -Parameters $saveArgs -ScriptBlock {
+                    param(
+                        [String] $Version,
+                        [String] $OutputDirectoryPath,
+                        [String] $Cpu
+                    )
+                    Save-NodeJsPackage @PSBoundParameters
+                }
+              }
+
+        # ZOMFSM does updating NPM take *forever*.
+        Mock -CommandName 'Invoke-WhiskeyNpmCommand' `
+             -ModuleName 'Whiskey' `
+             -ParameterFilter { ($ArgumentList | Select-Object -First 1) -eq 'install' }
+
+        if (-not $NoInstallMock)
+        {
+            # Unarchiving Node.js takes a long time so only do it once and try not to copy files.
+            Mock -CommandName 'Install-NodeJsPackage' `
+                 -ModuleName 'Whiskey' `
+                 -MockWith {
+                        $pkgFileName = $PackagePath | Split-Path -Leaf
+                        $cacheDirName = $pkgFileName -replace '\.(zip|tar\..z)$', ''
+                        $cachePath = Join-Path -Path $TestDrive -ChildPath $cacheDirName
+
+                        if (-not (Test-Path -Path $cachePath))
+                        {
+                            Write-Information "Extracting ""${PackagePath}"" to ""${TestDrive}""."
+                            if ([IO.Path]::GetExtension($pkgFileName) -eq '.zip')
+                            {
+                                [IO.Compression.ZipFile]::ExtractToDirectory($PackagePath, $TestDrive)
+                            }
+                            elseif ([IO.Path]::GetExtension($pkgFileName) -like '.?z')
+                            {
+                                tar -xJf $PackagePath -C $TestDrive
+                            }
+                        }
+
+                        if (Test-Path -Path $DestinationPath)
+                        {
+                            return
+                        }
+
+                        Write-Information "Linking ""${cachePath}"" to ""${DestinationPath}""."
+                        $linkType = 'SymbolicLink'
+                        if ($IsWindows)
+                        {
+                            $linkType = 'Junction'
+                        }
+                        New-Item -Path $DestinationPath -ItemType $linkType -Value $cachePath
+                } 
+            }
+        Invoke-WhiskeyTask -TaskContext $context -Parameter $parameters -Name 'InstallNodeJs'
     }
 
     function ThenNodeFolderDidNotChange
@@ -260,6 +349,8 @@ BeforeAll {
         $script:fileCreatedTime.add(((Get-ChildItem -Path $nodePath).CreationTime | Select-Object -ExpandProperty ticks))
         @( $filecreatedTime | Select-Object -Unique ) | Should -HaveCount 1
     }
+
+    Write-Host $TestDrive
 }
 
 AfterAll {
@@ -275,27 +366,6 @@ Describe 'InstallNodeJs' {
         $script:nodePath = Join-Path -Path $script:testRoot -ChildPath '.node'
         $Global:Error.Clear()
     }
-
-    AfterEach {
-        $emptyPath = Join-Path -Path $TestDrive -ChildPath 'Empty'
-        if (-not (Test-Path -Path $emptyPath))
-        {
-            New-Item -Path $emptyPath -ItemType Directory
-        }
-        if (-not (Test-Path -Path 'variable:IsWindows') -or $IsWindows)
-        {
-            robocopy $emptyPath $script:testRoot /MIR
-        }
-    }
-
-    $nodeVersions = Invoke-RestMethod -Uri 'https://nodejs.org/dist/index.json' | ForEach-Object { $_ }
-
-    $latestNodeVersion =
-        $nodeVersions |
-        Where-Object{ $_.lts  } |
-        Select-Object -ExpandProperty version |
-        Select-Object -First 1 |
-        ForEach-Object { $_.Substring(1) }
 
     It 'installs latest lts by default' -ForEach $latestNodeVersion {
         GivenPackageJsonFile
@@ -317,22 +387,16 @@ Describe 'InstallNodeJs' {
             $_ | Write-Output
         }
     $majorOnlyTestCase = $testCases[0]
-    $majorMinorPatchTestCase = $testCases[2]
 
     Context 'using version from whiskey.yml file' {
         It 'installs Node.js using version <node> and NPM using version <npm>' -ForEach $testCases {
             WhenInstallingNode -Version $node -NpmVersion $npm
-            ThenNode -Installed -AtVersion $expectedNode -WithNpmAtVersion $expectedNpm
-        }
-
-        It 'does not upgrade NPM' -ForEach $majorOnlyTestCase {
-            WhenInstallingNode -Version $node
-            ThenNode -Installed -AtVersion $expectedNode -WithNpmAtVersion $defaultNpm
+            ThenNode -Installed -AtVersion $expectedNode -WithNpmUpdatedTo $npm
         }
 
         It 'supports v prefix'  -ForEach $majorOnlyTestCase {
             WhenInstallingNode -Version "v${node}" -NpmVersion "v${npm}"
-            ThenNode -Installed -AtVersion $expectedNode -WithNpmAtVersion $expectedNpm
+            ThenNode -Installed -AtVersion $expectedNode -WithNpmUpdatedTo $npm
         }
     }
 
@@ -347,19 +411,7 @@ Describe 'InstallNodeJs' {
 }
 "@
             WhenInstallingNode -PackageJsonPath $pkgJsonPath
-            ThenNode -Installed -AtVersion $expectedNode -WithNpmAtVersion $expectedNpm
-        }
-
-        It 'does not upgrade NPM' -ForEach $majorMinorPatchTestCase {
-            $pkgJsonPath = GivenPackageJsonFile -WithContent @"
-{
-    "whiskey": {
-        "node": "16.20.2"
-    }
-}
-"@
-            WhenInstallingNode -PackageJsonPath $pkgJsonPath
-            ThenNode -Installed -AtVersion $expectedNode -WithNpmAtVersion $defaultNpm
+            ThenNode -Installed -AtVersion $expectedNode -WithNpmUpdatedTo $npm
         }
 
         It 'supports v prefix' -ForEach $majorOnlyTestCase {
@@ -372,7 +424,7 @@ Describe 'InstallNodeJs' {
 }
 "@
             WhenInstallingNode -PackageJsonPath $pkgJsonPath
-            ThenNode -Installed -AtVersion $expectedNode -WithNpmAtVersion $expectedNpm
+            ThenNode -Installed -AtVersion $expectedNode -WithNpmUpdatedTo $npm
         }
     }
 
@@ -381,14 +433,14 @@ Describe 'InstallNodeJs' {
             $nodeVersionPath = Join-Path -Path $script:context.BuildRoot -ChildPath '.node-version'
             $node | Set-Content -Path $nodeVersionPath
             WhenInstallingNode
-            ThenNode -Installed -AtVersion $expectedNode -WithNpmAtVersion $defaultNpm
+            ThenNode -Installed -AtVersion $expectedNode -AndNpmNotUpdated
         }
 
         It 'supports v prefix' -ForEach $majorOnlyTestCase {
             $nodeVersionPath = Join-Path -Path $script:context.BuildRoot -ChildPath '.node-version'
             "v${node}" | Set-Content -Path $nodeVersionPath
             WhenInstallingNode
-            ThenNode -Installed -AtVersion $expectedNode -WithNpmAtVersion $defaultNpm
+            ThenNode -Installed -AtVersion $expectedNode -AndNpmNotUpdated
         }
     }
 
@@ -403,21 +455,21 @@ Describe 'InstallNodeJs' {
         {
             $oldVersion = '0.7.9'
         }
-        { WhenInstallingNode -Version $oldVersion } | Should -Throw "*Failed to download Node v$($oldVersion)*"
+        { WhenInstallingNode -Version $oldVersion } | Should -Throw "*Failed to download Node.js v$($oldVersion)*"
         ThenNode -Not -Installed
-        $Global:Error | Select-Object -First 1 | Should -Match 'NotFound'
+        $Global:Error | Select-Object -First 2 | Select-Object -Last 1 | Should -Match 'NotFound'
     }
 
     It 'upgrades' {
-        WhenInstallingNode -Version '8.8.1'
-        ThenNode -Installed -AtVersion '8.8.1' -WithNpmAtVersion '5.4.2'
+        WhenInstallingNode -Version '8.8.1' -NoInstallMock
+        ThenNode -Installed -AtVersion '8.8.1' -AndNpmNotUpdated
 
         $path = Join-Path -Path $script:context.BuildRoot -ChildPath '.node\deleteme'
         New-Item -Path $path -ItemType File
         $path | Should -Exist
 
-        WhenInstallingNode -Version '8.9.0'
-        ThenNode -Installed -AtVersion '8.9.0' -WithNpmAtVersion '5.5.1'
+        WhenInstallingNode -Version '8.9.0' -NoInstallMock
+        ThenNode -Installed -AtVersion '8.9.0' -AndNpmNotUpdated
         # Make sure old .node directory gets deleted completely.
         $path | Should -Not -Exist
     }
@@ -452,7 +504,7 @@ Describe 'InstallNodeJs' {
         {
             $latestNodeVersion = $_
             GivenAntiVirusLockingFiles -ForVersion $latestNodeVersion -For '00:00:20'
-            { WhenInstallingNode } | Should -Throw '*failed to install Node.js*'
+            { WhenInstallingNode -NoInstallMock } | Should -Throw '*failed to install Node.js*'
             ThenNode -Not -Installed
             $Global:Error | Should -Match 'because renaming'
         }
@@ -472,7 +524,7 @@ Describe 'InstallNodeJs' {
 }
 "@
         WhenInstallingNode -PackageJsonPath $pkgJsonPath -NpmVersion $npm -InformationVariable 'infoMsgs'
-        ThenNode -Installed -AtVersion $expectedNode -WithNpmAtVersion $expectedNpm
+        ThenNode -Installed -AtVersion $expectedNode -WithNpmUpdatedTo $npm
         $infoMsgs |
             Where-Object { $_ -match "installing npm.* read from file.*whiskey\.yml" } |
             Should -Not -BeNullOrEmpty
