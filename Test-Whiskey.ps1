@@ -108,19 +108,8 @@ for ($idx = 0; $idx -lt $RunnerCount; ++$idx)
     $testJobs.Add($null)
 }
 
-# These tests are failing.
-$exclude = @(
-    'Get-MSBuild.Tests.ps1'
-
-    # These tests fail when run by this script.
-    # 'MSBuild.Tests.ps1',
-    # 'Pester.Tests.ps1',
-    # 'Version.Tests.ps1'
-)
-
 $testFiles =
     Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Test') -Filter '*.Tests.ps1' |
-    Where-Object 'Name' -NotIn $exclude |
     Sort-Object {
         # These tests take the longest so start them first.
         if ($_.Name -eq 'InstallNodeJs.Tests.ps1')

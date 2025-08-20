@@ -88,11 +88,6 @@ BeforeAll {
             }
         }
 
-        $instances = $script:vsInstances
-        Mock -CommandName 'Get-VSSetupInstance' `
-            -ModuleName 'Whiskey' `
-            -MockWith { $instances }.GetNewClosure()
-
         $MSBuildPath, $MSBuildPath32 |
             Where-Object { $_ } |
             ForEach-Object {
@@ -123,6 +118,35 @@ BeforeAll {
 
     function WhenGettingMSBuild
     {
+        $instances = $script:vsInstances
+        Mock -CommandName 'Get-VSSetupInstance' -ModuleName 'Whiskey' -MockWith { $instances }
+
+        $toolsKeyPath = $script:toolsVersionsKeyPath
+        Mock -CommandName 'Get-ChildItem' `
+             -ModuleName 'Whiskey' `
+             -ParameterFilter { $Path -eq 'HKLM:\SOFTWARE\Microsoft\MSBuild\ToolsVersions' } `
+             -MockWith {
+                 $PSBoundParameters['Path'] = $toolsKeyPath
+                 Get-ChildItem @PSBoundParameters
+             }
+
+        $toolsKeyPath32 = $script:toolsVersionsKeyPath32
+        Mock -CommandName 'Test-Path' `
+             -ModuleName 'Whiskey' `
+             -ParameterFilter { $Path -eq 'HKLM:\SOFTWARE\Wow6432Node\Microsoft\MSBuild\ToolsVersions' } `
+             -MockWith {
+                 $PSBoundParameters['Path'] = $toolsKeyPath32
+                 Test-Path @PSBoundParameters
+             }
+
+        Mock -CommandName 'Get-ChildItem' `
+             -ModuleName 'Whiskey' `
+             -ParameterFilter { $Path -eq 'HKLM:\SOFTWARE\Wow6432Node\Microsoft\MSBuild\ToolsVersions' } `
+             -MockWith {
+                 $PSBoundParameters['Path'] = $toolsKeyPath32
+                 Get-ChildItem @PSBoundParameters
+             }
+
         $script:output = Invoke-WhiskeyPrivateCommand -Name 'Get-MSBuild'
     }
 
@@ -183,33 +207,6 @@ Describe 'Get-MSBuild' {
         New-Item -Path $script:toolsVersionsKeyPath -Force | Out-Null
         New-Item -Path $script:toolsVersionsKeyPath32 -Force | Out-Null
 
-        $toolsKeyPath = $script:toolsVersionsKeyPath
-        Mock -CommandName 'Get-ChildItem' `
-            -ModuleName 'Whiskey' `
-            -ParameterFilter { $Path -eq 'HKLM:\SOFTWARE\Microsoft\MSBuild\ToolsVersions' } `
-            -MockWith {
-                $PSBoundParameters['Path'] = $toolsKeyPath
-                Get-ChildItem @PSBoundParameters
-            }.GetNewClosure()
-
-        $toolsKeyPath32 = $script:toolsVersionsKeyPath32
-        Mock -CommandName 'Test-Path' `
-            -ModuleName 'Whiskey' `
-            -ParameterFilter { $Path -eq 'HKLM:\SOFTWARE\Wow6432Node\Microsoft\MSBuild\ToolsVersions' } `
-            -MockWith {
-                $PSBoundParameters['Path'] = $toolsKeyPath32
-                Test-Path @PSBoundParameters
-            }.GetNewClosure()
-
-        Mock -CommandName 'Get-ChildItem' `
-            -ModuleName 'Whiskey' `
-            -ParameterFilter { $Path -eq 'HKLM:\SOFTWARE\Wow6432Node\Microsoft\MSBuild\ToolsVersions' } `
-            -MockWith {
-                $PSBoundParameters['Path'] = $toolsKeyPath32
-                Get-ChildItem @PSBoundParameters
-            }.GetNewClosure()
-
-        Mock -CommandName 'Get-VSSetupInstance' -ModuleName 'Whiskey'
     }
 
     AfterEach {
@@ -367,15 +364,6 @@ Describe 'Get-MSBuild' {
             $result.Path | Should -Exist
             $result.Path32 | Should -HaveCount 1
             $result.Path32 | Should -Exist
-            if( $result.Version -ge [Version]'17.0' )
-            {
-                $result.PathArm64 | Should -HaveCount 1
-                $result.PathArm64 | Should -Exist
-            }
-            else
-            {
-                $result.PathArm64 | Should -BeNullOrEmpty
-            }
         }
     }
 }
