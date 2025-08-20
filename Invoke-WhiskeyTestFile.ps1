@@ -49,7 +49,7 @@ else
         TestResult = @{
             Enabled = $true;
             OutputPath = $outputPath;
-            TestSuiteName = 'Whiskey';
+            # TestSuiteName = 'Whiskey';
         };
         Output = @{
             Verbosity = 'Detailed';
