@@ -4,6 +4,8 @@ param(
 
     [TimeSpan] $WaitInterval,
 
+    # For local testing/debugging, set this to show all test output, not just output from failed tests. On build
+    # servers, set the WHISKEY_CI_RECEIVE_ALL_TEST_OUTPUT env var to True.
     [switch] $ReceiveAll
 )
 
@@ -21,17 +23,27 @@ function Complete-Job
     $duration = $Job.PSEndtime - $Job.PSBeginTime
     $totalSeconds = [int]$duration.TotalSeconds
     Write-Information "Runner [${idx}] $($Job.Name) $($Job.State) in ${totalSeconds}s."
-    if ($Job.State -eq 'Failed' -or $ReceiveAll)
+    # Test fixtures that have failing tests that don't fail the build.
+    $failed = $Job.State -eq 'Failed'
+    if ($failed -or $ReceiveAll)
     {
         # Receiving jobs is very expensive and makes builds take longer so only receive jobs that failed.
         $Job | Receive-Job -InformationAction SilentlyContinue
-        if (-not $ReceiveAll)
-        {
-            Write-Error "Tests $($Job.Name) failed."
-            $script:testsFailed = $true
-        }
     }
+
+    if ($failed)
+    {
+        Write-Error "Tests $($Job.Name) failed."
+        $script:testsFailed = $true
+    }
+
     $Job | Remove-Job -Force
+}
+
+if (-not $PSBoundParameters.ContainsKey('ReceiveAll'))
+{
+    $ReceiveAll = (Test-Path -Path 'env:WHISKEY_CI_RECEIVE_ALL_TEST_OUTPUT') -and `
+                  $env:WHISKEY_CI_RECEIVE_ALL_TEST_OUTPUT -eq 'True'
 }
 
 $pester4Tests = @(
