@@ -111,8 +111,7 @@ for ($idx = 0; $idx -lt $RunnerCount; ++$idx)
 
 # These tests are failing.
 $exclude = @(
-    'Get-MSBuild.Tests.ps1',
-    'Log.Tests.ps1'
+    'Get-MSBuild.Tests.ps1'
 
     # These tests fail when run by this script.
     # 'MSBuild.Tests.ps1',

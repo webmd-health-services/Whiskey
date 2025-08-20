@@ -32,7 +32,7 @@ BeforeAll {
             [String]$Message
         )
 
-        $script:output | Should -Match $Message
+        $script:output | Select-Object -Last 1 | Should -Match $Message
     }
 
     function ThenWroteError
@@ -176,7 +176,7 @@ Describe 'Log' {
     }
 
     It 'supports ErrorAction stop' {
-        WhenLogging 'STOP!' -AtLevel 'Error' -WithParameter @{ 'ErrorAction' = 'Stop' } -ErrorAction SilentlyContinue
+        WhenLogging 'STOP!' -AtLevel 'Error' -WithParameter @{ '.ErrorAction' = 'Stop' } -ErrorAction SilentlyContinue
         ThenFailed -ExpectedErrorMessage 'STOP!'
     }
 
