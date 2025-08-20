@@ -66,21 +66,6 @@ for:
         }
   on_finish:
   - ps: &on_finish |
-      Get-ChildItem 'env:'
-      if (-not (Test-Path -Path 'env:APPVEYOR_JOB_ID'))
-      {
-        Write-Error "Missing APPVEYOR_JOB_ID env var."
-        exit
-      }
-      $jobID = $env:APPVEYOR_JOB_ID
-      $files = Resolve-Path -Path .\.output\pester-*.xml
-      $files | Format-Table
-      $wc = New-Object 'System.Net.WebClient'
-      foreach ($file in $files)
-      {
-        Get-Item -Path $file
-        $wc.UploadFile("https://ci.appveyor.com/api/testresults/nunit/${jobID}", $file)
-      }
       if ((Test-Path -Path 'env:ENABLE_RDP') -and $env:ENABLE_RDP -eq 'True')
       {
         $blockRdp = $true
