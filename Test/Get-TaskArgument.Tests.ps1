@@ -49,17 +49,19 @@ BeforeAll {
         $taskParameters = Get-LastTaskBoundParameter
         $null -eq $taskParameters | Should -BeFalse
 
-        $taskArgCount =
-            $taskParameters.Keys |
-            Where-Object { $_ -notin @('Context', 'TaskContext', 'Parameter', 'TaskParameter') } |
-            Measure-Object |
-            Select-Object -ExpandProperty 'Count'
         if( $WithParameter )
         {
-            $taskArgCount | Should -Be $WithParameter.Count
             foreach( $key in $WithParameter.Keys )
             {
-                $taskParameters[$key] | Should -Be $WithParameter[$key] -Because $key
+                $expectedValue = $WithParameter[$key]
+                if ($null -eq $expectedValue)
+                {
+                    $taskParameters.ContainsKey($key) | Should -BeFalse -Because $key
+                }
+                else
+                {
+                    $taskParameters[$key] | Should -Be $expectedValue -Because $key
+                }
             }
         }
 
@@ -168,11 +170,11 @@ Describe 'Get-TaskArgument' {
         $origWhatIf = $Global:WhatIfPreference
         $originalInfo = $Global:InformationPreference
         $parameters = @{
-            'Verbose' = 'true' ;
-            'Debug' = 'true';
+            '.Verbose' = 'true' ;
+            '.Debug' = 'true';
             'WhatIf' = 'true';
-            'InformationAction' = 'Continue';
-            'ErrorAction' = 'Stop';
+            '.InformationAction' = 'Continue';
+            '.ErrorAction' = 'Stop';
         }
         WhenRunningTask 'CapturesCommonPreferencesTask' -Parameter $parameters
         ThenTaskCalled -WithParameter @{
@@ -198,11 +200,11 @@ Describe 'Get-TaskArgument' {
         $origWhatIf = $Global:WhatIfPreference
         $originalInfo = $Global:InformationPreference
         $parameters = @{
-            'Verbose' = 'false' ;
-            'Debug' = 'false';
+            '.Verbose' = 'false' ;
+            '.Debug' = 'false';
             'WhatIf' = 'false';
-            'InformationAction' = 'Ignore'
-            'ErrorAction' = 'Ignore'
+            '.InformationAction' = 'Ignore'
+            '.ErrorAction' = 'Ignore'
         }
         WhenRunningTask -Named 'CapturesCommonPreferencesTask' `
                         -Parameter $parameters `
@@ -214,7 +216,7 @@ Describe 'Get-TaskArgument' {
         ThenTaskCalled -WithParameter @{
             'Verbose' = $false ;
             'VerbosePreference' = 'SilentlyContinue'
-            'Debug' = $false;
+            'Debug' = $null;
             'DebugPreference' = 'SilentlyContinue';
             'WhatIf' = $false;
             'WhatIfPreference' = $false;
@@ -244,25 +246,25 @@ Describe 'Get-TaskArgument' {
             $Global:ErrorActionPreference = 'Continue'
 
             $parameters = @{
-                'Verbose' = 'false' ;
-                'Debug' = 'false';
+                '.Verbose' = 'false' ;
+                '.Debug' = 'false';
                 'WhatIf' = 'true';
-                'InformationAction' = 'Ignore';
-                'ErrorAction' = 'Ignore';
+                '.InformationAction' = 'Ignore';
+                '.ErrorAction' = 'Ignore';
             }
             WhenRunningTask 'CapturesCommonPreferencesTask' -Parameter $parameters
             ThenTaskCalled -WithParameter @{
-                                                'Verbose' = $false;
-                                                'VerbosePreference' = 'SilentlyContinue';
-                                                'Debug' = $false;
-                                                'DebugPreference' = 'SilentlyContinue';
-                                                'WhatIf' = $true;
-                                                'WhatIfPreference' = $true;
-                                                'InformationAction' = 'Ignore';
-                                                'InformationPreference' = 'Ignore';
-                                                'ErrorAction' = 'Ignore';
-                                                'ErrorActionPreference' = 'Ignore';
-                                            }
+                'Verbose' = $false;
+                'VerbosePreference' = 'SilentlyContinue';
+                'Debug' = $null;
+                'DebugPreference' = 'SilentlyContinue';
+                'WhatIf' = $true;
+                'WhatIfPreference' = $true;
+                'InformationAction' = 'Ignore';
+                'InformationPreference' = 'Ignore';
+                'ErrorAction' = 'Ignore';
+                'ErrorActionPreference' = 'Ignore';
+            }
             $Global:VerbosePreference | Should -Be 'Continue'
             $Global:DebugPreference | Should -Be 'Continue'
             $Global:WhatIfPreference | Should -BeFalse

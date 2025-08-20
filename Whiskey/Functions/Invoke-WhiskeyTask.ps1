@@ -353,9 +353,16 @@ function Invoke-WhiskeyTask
 
             # PowerShell's default DebugPreference when someone uses the -Debug switch is `Inquire`. That would cause a
             # build to hang, so let's set it to Continue so users can see debug output.
-            if( $taskArgs['Debug'] )
+            if ($taskArgs.ContainsKey('Debug'))
             {
-                $DebugPreference = 'Continue'
+                if ($taskArgs['Debug'])
+                {
+                    $DebugPreference = 'Continue'
+                }
+                else
+                {
+                    $DebugPreference = 'SilentlyContinue'
+                }
                 $taskArgs.Remove('Debug')
             }
 
