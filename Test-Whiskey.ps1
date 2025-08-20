@@ -33,7 +33,6 @@ function Complete-Job
 
     if ($failed)
     {
-        Write-Error "Tests $($Job.Name) failed."
         $script:testsFailed = $true
     }
 
