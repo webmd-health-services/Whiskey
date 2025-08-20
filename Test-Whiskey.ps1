@@ -39,11 +39,9 @@ $pester4Tests = @(
     'AppVeyorWaitForBuildJobs.Tests.ps1',
     'Convert-WhiskeyPathDirectorySeparator.Tests.ps1',
     'ConvertFrom-WhiskeyContext.Tests.ps1',
-    'ConvertFrom-WhiskeyYamlScalar.Tests.ps1',
     'CopyFile.Tests.ps1',
     'Delete.Tests.ps1',
     'Find-WhiskeyPowerShellModule.Tests.ps1',
-    'Get-MSBuild.Tests.ps1',
     'Get-WhiskeyApiKey.Tests.ps1',
     'Get-WhiskeyBuildMetadata.Tests.ps1',
     'Get-WhiskeyContext.Tests.ps1',
@@ -55,11 +53,9 @@ $pester4Tests = @(
     'Import-WhiskeyPowerShellModule.Tests.ps1',
     'Import-WhiskeyYaml.Tests.ps1',
     'Install-WhiskeyDotNetSdk.Tests.ps1',
-    'Install-WhiskeyNodeModule.Tests.ps1',
     'Invoke-WhiskeyDotNetCommand.Tests.ps1',
     'Invoke-WhiskeyPipelineTask.Tests.ps1',
     'LoadTask.Tests.ps1',
-    'Log.Tests.ps1',
     'New-WhiskeyContext.Tests.ps1',
     'PublishPowerShellModule.Tests.ps1',
     'PublishPowerShellScript.Tests.ps1',
@@ -73,8 +69,7 @@ $pester4Tests = @(
     'SetVariableFromPowerShellDataFile.Tests.ps1',
     'SetVariableFromXml.Tests.ps1',
     'Uninstall-WhiskeyNodeModule.Tests.ps1',
-    'Uninstall-WhiskeyPowerShellModule.Tests.ps1',
-    'Uninstall-WhiskeyTool.Tests.ps1'
+    'Uninstall-WhiskeyPowerShellModule.Tests.ps1'
 )
 
 if (-not $RunnerCount -or $RunnerCount -le 0)
@@ -104,7 +99,6 @@ for ($idx = 0; $idx -lt $RunnerCount; ++$idx)
 
 # These tests are failing.
 $exclude = @(
-    'ConvertFrom-WhiskeyYamlScalar.Tests.ps1',
     'Get-MSBuild.Tests.ps1',
     'Log.Tests.ps1'
 
