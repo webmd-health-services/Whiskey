@@ -589,12 +589,11 @@ function RunsCommandThatSetsLastExitCodeTo1
     [CmdletBinding()]
     [Whiskey.Task('RunsCommandThatSetsLastExitCodeTo1')]
     param(
-
     )
 
     # Have to run powershell via Invoke-Expression otherwise when run by our Test-Whiskey.ps1 script, the commands fails
     # with an error that '-NonInteractive' is not a command.
-    if ($PSVersionTable['Edition'] -eq 'Core')
+    if ($PSVersionTable['PSEdition'] -eq 'Core')
     {
         Invoke-Expression 'pwsh -NoProfile -NonInteractive -Command ''exit 1'''
     }
