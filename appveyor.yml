@@ -66,6 +66,7 @@ for:
         }
   on_finish:
   - ps: &on_finish |
+      .\Format-PesterResult.ps1 -Path './.output/pester*.xml' -QueueDuration '00:10:00'
       if ((Test-Path -Path 'env:ENABLE_RDP') -and $env:ENABLE_RDP -eq 'True')
       {
         $blockRdp = $true
