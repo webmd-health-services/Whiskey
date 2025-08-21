@@ -4,6 +4,8 @@ param(
 
     [TimeSpan] $WaitInterval,
 
+    # For local testing/debugging, set this to show all test output, not just output from failed tests. On build
+    # servers, set the WHISKEY_CI_RECEIVE_ALL_TEST_OUTPUT env var to True.
     [switch] $ReceiveAll
 )
 
@@ -21,17 +23,26 @@ function Complete-Job
     $duration = $Job.PSEndtime - $Job.PSBeginTime
     $totalSeconds = [int]$duration.TotalSeconds
     Write-Information "Runner [${idx}] $($Job.Name) $($Job.State) in ${totalSeconds}s."
-    if ($Job.State -eq 'Failed' -or $ReceiveAll)
+    # Test fixtures that have failing tests that don't fail the build.
+    $failed = $Job.State -eq 'Failed'
+    if ($failed -or $ReceiveAll)
     {
         # Receiving jobs is very expensive and makes builds take longer so only receive jobs that failed.
         $Job | Receive-Job -InformationAction SilentlyContinue
-        if (-not $ReceiveAll)
-        {
-            Write-Error "Tests $($Job.Name) failed."
-            $script:testsFailed = $true
-        }
     }
+
+    if ($failed)
+    {
+        $script:testsFailed = $true
+    }
+
     $Job | Remove-Job -Force
+}
+
+if (-not $PSBoundParameters.ContainsKey('ReceiveAll'))
+{
+    $ReceiveAll = (Test-Path -Path 'env:WHISKEY_CI_RECEIVE_ALL_TEST_OUTPUT') -and `
+                  $env:WHISKEY_CI_RECEIVE_ALL_TEST_OUTPUT -eq 'True'
 }
 
 $pester4Tests = @(
@@ -39,11 +50,9 @@ $pester4Tests = @(
     'AppVeyorWaitForBuildJobs.Tests.ps1',
     'Convert-WhiskeyPathDirectorySeparator.Tests.ps1',
     'ConvertFrom-WhiskeyContext.Tests.ps1',
-    'ConvertFrom-WhiskeyYamlScalar.Tests.ps1',
     'CopyFile.Tests.ps1',
     'Delete.Tests.ps1',
     'Find-WhiskeyPowerShellModule.Tests.ps1',
-    'Get-MSBuild.Tests.ps1',
     'Get-WhiskeyApiKey.Tests.ps1',
     'Get-WhiskeyBuildMetadata.Tests.ps1',
     'Get-WhiskeyContext.Tests.ps1',
@@ -55,11 +64,9 @@ $pester4Tests = @(
     'Import-WhiskeyPowerShellModule.Tests.ps1',
     'Import-WhiskeyYaml.Tests.ps1',
     'Install-WhiskeyDotNetSdk.Tests.ps1',
-    'Install-WhiskeyNodeModule.Tests.ps1',
     'Invoke-WhiskeyDotNetCommand.Tests.ps1',
     'Invoke-WhiskeyPipelineTask.Tests.ps1',
     'LoadTask.Tests.ps1',
-    'Log.Tests.ps1',
     'New-WhiskeyContext.Tests.ps1',
     'PublishPowerShellModule.Tests.ps1',
     'PublishPowerShellScript.Tests.ps1',
@@ -73,8 +80,7 @@ $pester4Tests = @(
     'SetVariableFromPowerShellDataFile.Tests.ps1',
     'SetVariableFromXml.Tests.ps1',
     'Uninstall-WhiskeyNodeModule.Tests.ps1',
-    'Uninstall-WhiskeyPowerShellModule.Tests.ps1',
-    'Uninstall-WhiskeyTool.Tests.ps1'
+    'Uninstall-WhiskeyPowerShellModule.Tests.ps1'
 )
 
 if (-not $RunnerCount -or $RunnerCount -le 0)
@@ -102,21 +108,8 @@ for ($idx = 0; $idx -lt $RunnerCount; ++$idx)
     $testJobs.Add($null)
 }
 
-# These tests are failing.
-$exclude = @(
-    'ConvertFrom-WhiskeyYamlScalar.Tests.ps1',
-    'Get-MSBuild.Tests.ps1',
-    'Log.Tests.ps1'
-
-    # These tests fail when run by this script.
-    # 'MSBuild.Tests.ps1',
-    # 'Pester.Tests.ps1',
-    # 'Version.Tests.ps1'
-)
-
 $testFiles =
     Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Test') -Filter '*.Tests.ps1' |
-    Where-Object 'Name' -NotIn $exclude |
     Sort-Object {
         # These tests take the longest so start them first.
         if ($_.Name -eq 'InstallNodeJs.Tests.ps1')

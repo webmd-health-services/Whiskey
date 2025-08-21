@@ -53,236 +53,6 @@ function Install-Node
         return $nodeVersion.version
     }
 
-    function Save-NodeJsPackage
-    {
-        [CmdletBinding()]
-        param(
-            [Parameter(Mandatory)]
-            [String] $Version
-        )
-
-        $platform = 'win'
-        $packageExtension = 'zip'
-        if ($IsLinux)
-        {
-            $platform = 'linux'
-            $packageExtension = 'tar.xz'
-        }
-        elseif ($IsMacOS)
-        {
-            $platform = 'darwin'
-            $packageExtension = 'tar.gz'
-        }
-
-        if ($Cpu)
-        {
-            $arch = $Cpu
-        }
-        else
-        {
-            $arch = 'x86'
-            if ([Environment]::Is64BitOperatingSystem)
-            {
-                $arch = 'x64'
-            }
-        }
-
-        $extractedDirName = "node-${Version}-${platform}-${arch}"
-        $filename = "${extractedDirName}.${packageExtension}"
-
-        $pkgChecksum = ''
-        $checksumsUrl = "https://nodejs.org/dist/${Version}/SHASUMS256.txt"
-        try
-        {
-            $pkgChecksum =
-                Invoke-WebRequest -Uri $checksumsUrl -ErrorAction Ignore |
-                Select-Object -ExpandProperty 'Content' |
-                ForEach-Object { $_ -split '\r?\n' } |
-                Where-Object { $_ -match "^([^ ]+) +$([regex]::Escape($filename))$" } |
-                ForEach-Object { $Matches[1] } |
-                Select-Object -First 1
-
-            if (-not $pkgChecksum)
-            {
-                $msg = "Node.js package will not be validated because the $($filename | Format-Path) package's checksum is " +
-                       "missing from ${checksumsUrl}."
-                Write-WhiskeyWarning -Context $TaskContext -Message $msg
-            }
-        }
-        catch
-        {
-            $msg = "Node.js package will not be validated because the request to download the ${Version} checksums " +
-                   "from ${checksumsUrl} failed: ${_}."
-            Write-WhiskeyWarning -Context $TaskContext -Message $msg
-        }
-
-        $outputDirPath = $TaskContext.OutputDirectory
-        $nodeZipFilePath = Join-Path -Path $outputDirPath -ChildPath $filename
-        if ((Test-Path -Path $nodeZipFilePath))
-        {
-            $actualChecksum = Get-FileHash -Path $nodeZipFilePath -Algorithm SHA256
-            if ($pkgChecksum -and $pkgChecksum -eq $actualChecksum.Hash)
-            {
-                return $nodeZipFilePath
-            }
-
-            Remove-Item -Path $nodeZipFilePath
-        }
-
-        $pkgUrl = "https://nodejs.org/dist/${Version}/${filename}"
-
-        if (-not (Test-Path -Path $outputDirPath))
-        {
-            Write-WhiskeyDebug -Message "Creating output directory $($outputDirPath | Format-Path)."
-            New-Item -Path $outputDirPath -ItemType 'Directory' -Force | Out-Null
-        }
-
-        try
-        {
-            Invoke-WebRequest -Uri $pkgUrl -OutFile $nodeZipFilePath | Out-Null
-        }
-        catch
-        {
-            $responseInfo = ''
-            $notFound = $false
-            if( $_.Exception | Get-Member -Name 'Response' )
-            {
-                $responseStatus = $_.Exception.Response.StatusCode
-                $responseInfo = ' Received a {0} ({1}) response.' -f $responseStatus,[int]$responseStatus
-                if( $responseStatus -eq [Net.HttpStatusCode]::NotFound )
-                {
-                    $notFound = $true
-                }
-            }
-            else
-            {
-                Write-WhiskeyError -Message "Exception downloading ${pkgUrl}: $($_)"
-                $responseInfo = ' Please see previous error for more information.'
-                return
-            }
-
-            $errorMsg = "Failed to download Node ${Version}) from ${pkgUrl}.$($responseInfo)"
-            if( $notFound )
-            {
-                $errorMsg = "$($errorMsg) It looks like this version of Node wasn't packaged as a ZIP file. " +
-                            'Please use Node v4.5.0 or newer.'
-            }
-            Stop-WhiskeyTask -TaskContext $TaskContext -Message $errorMsg
-            return
-        }
-
-        if ($pkgChecksum)
-        {
-            $actualChecksum = Get-FileHash -Path $nodeZipFilePath -Algorithm SHA256
-            if ($pkgChecksum -ne $actualChecksum.Hash)
-            {
-                $msg = "Failed to install Node.js ${Version} because the SHA256 checksum of the file downloaded " +
-                       "from ${pkgUrl}, ${actualChecksum}, doesn't match the expected checksum, ${pkgChecksum}."
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
-                return
-            }
-        }
-
-        return $nodeZipFilePath
-    }
-
-    function Install-NodeJsPackage
-    {
-        [CmdletBinding()]
-        param(
-            # The directory where Node.js should be installed.
-            [Parameter(Mandatory)]
-            [String] $PackagePath,
-
-            [Parameter(Mandatory)]
-            [String] $DestinationPath
-        )
-
-        Set-StrictMode -Version 'Latest'
-        Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-
-        if (Test-Path -Path $DestinationPath)
-        {
-            Remove-WhiskeyFileSystemItem -Path $DestinationPath
-        }
-
-        if ($IsWindows)
-        {
-            # Windows/.NET can't handle the long paths in the Node package, so on that platform, we need to download
-            # 7-zip because it can handle long paths.
-            $7zipPackageRoot = Install-WhiskeyTool -Name '7-Zip.CommandLine' `
-                                                   -ProviderName 'NuGet' `
-                                                   -Version '18.*' `
-                                                   -InstallRoot $TaskContext.BuildRoot
-            $7z = Join-Path -Path $7zipPackageRoot -ChildPath 'tools\x64\7za.exe' -Resolve -ErrorAction Stop
-
-            $archive = [IO.Compression.ZipFile]::OpenRead($PackagePath)
-            $outputDirectoryName = $archive.Entries[0].FullName
-            $archive.Dispose()
-            $outputDirectoryName =
-                $outputDirectoryName.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
-            $extractDirPath = Join-Path -Path ($DestinationPath | Split-Path -Parent) -ChildPath $outputDirectoryName
-
-            Write-WhiskeyVerbose -Message ('{0} x {1} -o{2} -y' -f $7z,$PackagePath,$extractDirPath)
-            & $7z -spe 'x' $PackagePath ('-o{0}' -f $extractDirPath) '-y' | Write-WhiskeyVerbose
-
-            # We use New-TimeSpan so we can mock it and wait for our simulated anti-virus process to lock a
-            # file (i.e. so we can test that this wait logic works).
-            $maxTime = New-TimeSpan -Seconds 10
-            $timer = [Diagnostics.Stopwatch]::StartNew()
-            $exists = $false
-            $lastError = $null
-            $nodeDirectoryName = $DestinationPath | Split-Path -Leaf
-            Write-WhiskeyDebug "Renaming $($extractDirPath | Format-Path) -> $($nodeDirectoryName | Format-Path)."
-            do
-            {
-                Rename-Item -Path $extractDirPath -NewName $nodeDirectoryName -ErrorAction SilentlyContinue
-                $exists = Test-Path -Path $DestinationPath -PathType Container
-
-                if( $exists )
-                {
-                    Write-WhiskeyDebug "Rename succeeded."
-                    break
-                }
-
-                $lastError = $Global:Error | Select-Object -First 1
-                Write-WhiskeyDebug -Message "Rename failed: $($lastError)"
-
-                $Global:Error.RemoveAt(0)
-                Start-Sleep -Seconds 1
-            }
-            while( $timer.Elapsed -lt $maxTime )
-
-            if (-not $exists)
-            {
-                $msg = "Failed to install Node.js ${Version} to $($DestinationPath | Format-Path) because renaming " +
-                       "directory $($outputDirectoryName | Format-Path) to $($nodeDirectoryName | Format-Path) " +
-                       "failed: $($lastError)"
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
-                return
-            }
-
-        }
-        else
-        {
-            if( -not (Test-Path -Path $DestinationPath -PathType Container) )
-            {
-                New-Item -Path $DestinationPath -ItemType 'Directory' -Force | Out-Null
-            }
-
-            $msg = "tar -xJf $($PackagePath | Format-Path) -C $($DestinationPath | Format-Path) --strip-components=1"
-            Write-WhiskeyVerbose -Context $TaskContext -Message $msg
-            tar -xJf $PackagePath -C $DestinationPath '--strip-components=1' | Write-WhiskeyVerbose
-            if ($LASTEXITCODE)
-            {
-                $msg = "Failed to extract Node.js ${Version} package $($PackagePath | Format-Path) to " +
-                       "$($DestinationPath | Format-Path)."
-                Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
-                return
-            }
-        }
-    }
-
     $nodeSource = ''
     $npmSource = ''
     $whiskeyYmlPath = $TaskContext.ConfigurationPath | Resolve-WhiskeyRelativePath
@@ -401,9 +171,11 @@ function Install-Node
 
     if ($installNode)
     {
-        $pkgPath = Save-NodeJsPackage -Version $versionToInstall
+        $pkgPath =
+            Save-NodeJsPackage -Version $versionToInstall -OutputDirectoryPath $TaskContext.OutputDirectory -Cpu $Cpu
         if (-not $pkgPath)
         {
+            Stop-WhiskeyTask -TaskContext $TaskContext -Message "Failed to download Node.js ${versionToInstall}."
             return
         }
 
@@ -438,7 +210,7 @@ function Install-Node
         {
             $msg = "Installing npm@${NpmVersion}${npmSourceMsg}."
             Write-WhiskeyInfo -Context $TaskContext -Message $msg
-            & $npmPath install "npm@${NpmVersion}" '-g'
+            Invoke-WhiskeyNpmCommand -NpmPath $npmPath -ArgumentList 'install',"npm@${NpmVersion}",'-g'
         }
     }
 }

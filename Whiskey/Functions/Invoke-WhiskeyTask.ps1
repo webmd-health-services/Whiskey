@@ -353,15 +353,23 @@ function Invoke-WhiskeyTask
 
             # PowerShell's default DebugPreference when someone uses the -Debug switch is `Inquire`. That would cause a
             # build to hang, so let's set it to Continue so users can see debug output.
-            if( $taskArgs['Debug'] )
+            if ($taskArgs.ContainsKey('Debug'))
             {
-                $DebugPreference = 'Continue'
+                if ($taskArgs['Debug'])
+                {
+                    $DebugPreference = 'Continue'
+                }
+                else
+                {
+                    $DebugPreference = 'SilentlyContinue'
+                }
                 $taskArgs.Remove('Debug')
             }
 
+            Write-WhiskeyDebug "Calling ${Name} task's command, $($task.CommandName)."
+
             $outVarName = $taskProperties['OutVariable']
 
-            Write-WhiskeyDebug "Calling task ${Name}."
             # If the task doesn't have the [CmdletBinding()] parameter, fake it with Tee-Object.
             if ($outVarName -and -not $taskArgs.ContainsKey('OutVariable'))
             {

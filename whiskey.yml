@@ -63,5 +63,3 @@ Build:
   .OnlyBy: BuildServer
 
 - PowerShell: .\Test-Whiskey.ps1 -RunnerCount $env:WHISKEY_CI_NUM_TEST_RUNNERS
-
-- PowerShell: .\Format-PesterResult.ps1 -Path './.output/pester*.xml' -QueueDuration '00:10:00'

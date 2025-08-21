@@ -1229,7 +1229,7 @@ Describe 'Invoke-WhiskeyTask' {
         $DebugPreference = 'Ignore'
         WhenRunningTask 'Log' -Parameter @{ Message = 'DEBUG!'; 'Level' = 'Debug'; '.Debug' = 'true' }
         ThenPipelineSucceeded
-        $script:output | Should -Match 'DEBUG!'
+        $script:output | Select-Object -Last 1 | Should -Match 'DEBUG!'
     }
 
     Context 'task does not have CmdletBinding attribute' {

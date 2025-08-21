@@ -6,6 +6,27 @@ param(
 
 Set-Location $PSScriptRoot
 
+function Send-TestResult
+{
+    param(
+        [String] $Path
+    )
+
+    if (-not (Test-Path -Path 'env:APPVEYOR_JOB_ID'))
+    {
+        return
+    }
+
+    if (-not (Test-Path -Path $Path))
+    {
+        Write-Error "Test result file ""${Path}"" does not exist."
+        return
+    }
+
+    $jobID = $env:APPVEYOR_JOB_ID
+    [Net.WebClient]::New().UploadFile("https://ci.appveyor.com/api/testresults/nunit/${jobID}", $Path)
+}
+
 $testFile = Get-Item -Path $Path
 if (-not $testFile)
 {
@@ -22,6 +43,8 @@ Import-Module -Name (Join-Path -Path $PSScriptRoot -ChildPath 'PSModules\Pester'
 if ($pesterVersion -eq 4)
 {
     Invoke-Pester -Script $testFile.FullName -OutputFile $outputPath -OutputFormat 'NUnitXml'
+
+    Send-TestResult -Path $outputPath
 
     $outputFileContent = Get-Content -Path $outputPath -Raw
     $result = [xml]$outputFileContent
@@ -49,11 +72,16 @@ else
         TestResult = @{
             Enabled = $true;
             OutputPath = $outputPath;
-            TestSuiteName = 'Whiskey';
+            # TestSuiteName = 'Whiskey';
         };
         Output = @{
             Verbosity = 'Detailed';
         }
     }
     Invoke-Pester -Configuration $pesterCfg
+    Send-TestResult -Path $outputPath
+    if ($LASTEXITCODE)
+    {
+        exit 1
+    }
 }

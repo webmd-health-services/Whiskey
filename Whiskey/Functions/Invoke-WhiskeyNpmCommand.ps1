@@ -29,24 +29,36 @@ function Invoke-WhiskeyNpmCommand
 
     Demonstrates how to run the `npm install` command from a task.
     #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName='NpmCli')]
     param(
-        [Parameter(Mandatory)]
+        [Parameter(Mandatory, ParameterSetName='NpmCli')]
         # The NPM command to execute, e.g. `install`, `prune`, `run-script`, etc.
         [String]$Name,
 
+        [Parameter(Mandatory, ParameterSetName='SpecificNpm')]
+        [String] $NpmPath,
+
         # An array of arguments to be given to the NPM command being executed.
+        [Parameter(Mandatory, ParameterSetName='SpecificNpm')]
+        [Parameter(ParameterSetName='NpmCli')]
         [String[]]$ArgumentList,
 
-        [Parameter(Mandatory)]
+        [Parameter(Mandatory, ParameterSetName='NpmCli')]
         [String]$BuildRootPath,
 
         # NPM commands are being run on a developer computer.
+        [Parameter(ParameterSetName='NpmCli')]
         [switch]$ForDeveloper
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
+
+    if ($PSCmdlet.ParameterSetName -eq 'SpecificNpm')
+    {
+        & $NpmPath $ArgumentList
+        return
+    }
 
     $nodePath = Resolve-WhiskeyNodePath -BuildRootPath $BuildRootPath -ErrorAction Stop
     if( -not $nodePath )

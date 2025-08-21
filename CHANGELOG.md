@@ -235,6 +235,7 @@ The `Uri` property on the `NuGetPush`, `PublishBitbucketServerTag`, and `Publish
   uses the last exit code of the last command run as its exit code. Whiskey now resets the last exit code after each
   task is run. The proper way for a task to fail a build is to throw a terminating error by calling `Stop-WhiskeyError`.
 * `TaskDefaults` task fails to set default properties using task aliases.
+* Debug output wasn't disabled when the `.Debug` property is set to `false` on a task.
 
 ### Removed
 

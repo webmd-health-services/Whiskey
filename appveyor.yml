@@ -31,15 +31,15 @@ environment:
     appveyor_build_worker_image: Visual Studio 2017 # Has minimum PackageManagement and PowerShellGet modules.
 
   - job_name: PowerShell 6.2 on Windows
-    job_group: pwsh
+    job_group: pwsh-win
     appveyor_build_worker_image: Visual Studio 2015
 
   - job_name: PowerShell 7.2 on Ubuntu
-    job_group: pwsh
+    job_group: pwsh-nix
     appveyor_build_worker_image: Ubuntu2004
 
   - job_name: PowerShell 7.1 on Windows
-    job_group: pwsh
+    job_group: pwsh-win
     appveyor_build_worker_image: Visual Studio 2019
 
 
@@ -65,22 +65,9 @@ for:
             # $Global:Error | Format-List * -Force
         }
   on_finish:
-  - ps: &on_finish |
-      Get-ChildItem 'env:'
-      if (-not (Test-Path -Path 'env:APPVEYOR_JOB_ID'))
-      {
-        Write-Error "Missing APPVEYOR_JOB_ID env var."
-        exit
-      }
-      $jobID = $env:APPVEYOR_JOB_ID
-      $files = Resolve-Path -Path .\.output\pester-*.xml
-      $files | Format-Table
-      $wc = New-Object 'System.Net.WebClient'
-      foreach ($file in $files)
-      {
-        Get-Item -Path $file
-        $wc.UploadFile("https://ci.appveyor.com/api/testresults/nunit/${jobID}", $file)
-      }
+  - ps: &format_test_results |
+      .\Format-PesterResult.ps1 -Path './.output/pester*.xml' -QueueDuration '00:10:00'
+  - ps: &enable_rdp |
       if ((Test-Path -Path 'env:ENABLE_RDP') -and $env:ENABLE_RDP -eq 'True')
       {
         $blockRdp = $true
@@ -88,11 +75,26 @@ for:
         iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
       }
 
+
 # Build in PowerShell
 - matrix:
     only:
-    - job_group: pwsh
+    - job_group: pwsh-win
   build_script:
   - pwsh: *build_script
   on_finish:
-  - pwsh: *on_finish
+  - pwsh: *format_test_results
+  - pwsh: *enable_rdp
+
+- matrix:
+    only:
+    - job_group: pwsh-nix
+  build_script:
+  - pwsh: *build_script
+  on_finish:
+  - pwsh: *format_test_results
+  - sh: &enable_ssh |
+      if [ "${ENABLE_RDP,,}" = "true" ] ; then
+        export APPVEYOR_SSH_BLOCK=true
+        curl -sflL 'https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-ssh.sh' | bash -e -
+      fi
