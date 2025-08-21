@@ -26,6 +26,19 @@ BeforeAll {
 
     & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
+    # Pester deletes the entire contents of the test drive after each Context block one item at a time. This is really
+    # inefficient and causes a significant delay after each Context block finishes. So, we need to put our stuff
+    # somewhere else.
+    $tempDirName = "$($PSCommandPath | Split-Path -Leaf)-$([IO.Path]::GetRandomFileName())"
+    $script:testFixtureTempDirPath = Join-Path -Path ([IO.Path]::GetTempPath()) -ChildPath $tempDirName
+    # $script:testFixtureTempDirPath = $TestDrive
+    if (-not (Test-Path -Path $script:testFixtureTempDirPath))
+    {
+        New-Item -Path $script:testFixtureTempDirPath -ItemType 'Directory'
+    }
+
+    $script:testNum = 0
+    $script:testRoot = $null
     [Whiskey.Context]$script:context = $null
 
     function GivenAntiVirusLockingFiles
@@ -279,6 +292,7 @@ BeforeAll {
             $parameters['Cpu'] = $Cpu
         }
 
+        $tempDirPath = $script:testFixtureTempDirPath
         $testDirPath = $script:testRoot
         # Save packages to the same place across tests so we only download each package once.
         Mock -CommandName 'Save-NodeJsPackage' `
@@ -289,7 +303,7 @@ BeforeAll {
              -MockWith {
                 $saveArgs = @{
                     Version = $Version;
-                    OutputDirectoryPath = $TestDrive;
+                    OutputDirectoryPath = $tempDirPath;
                 }
 
                 if ($Cpu)
@@ -320,18 +334,18 @@ BeforeAll {
                  -MockWith {
                         $pkgFileName = $PackagePath | Split-Path -Leaf
                         $cacheDirName = $pkgFileName -replace '\.(zip|tar\..z)$', ''
-                        $cachePath = Join-Path -Path $TestDrive -ChildPath $cacheDirName
+                        $cachePath = Join-Path -Path $tempDirPath -ChildPath $cacheDirName
 
                         if (-not (Test-Path -Path $cachePath))
                         {
-                            Write-Information "Extracting ""${PackagePath}"" to ""${TestDrive}""."
+                            Write-Information "Extracting ""${PackagePath}"" to ""${tempDirPath}""."
                             if ([IO.Path]::GetExtension($pkgFileName) -eq '.zip')
                             {
-                                [IO.Compression.ZipFile]::ExtractToDirectory($PackagePath, $TestDrive)
+                                [IO.Compression.ZipFile]::ExtractToDirectory($PackagePath, $tempDirPath)
                             }
                             elseif ([IO.Path]::GetExtension($pkgFileName) -like '.?z')
                             {
-                                tar -xJf $PackagePath -C $TestDrive
+                                tar -xJf $PackagePath -C $tempDirPath
                             }
                         }
 
@@ -362,28 +376,23 @@ BeforeAll {
 AfterAll {
     $pathSeparator = [IO.Path]::PathSeparator
     $env:Path = ($env:Path -split $pathSeparator | Where-Object { $_ } | Where-Object { Test-Path -Path $_ }) -join $pathSeparator
+    # On Linux, Remove-Item has progress 😖
+    $ProgressPreference = 'SilentlyContinue'
+    # We don't care if this succeeds or not.
+    $numItems = (Get-ChildItem -Path $script:testFixtureTempDirPath -Recurse | Measure-Object).Count
+    $timer = [Diagnostics.Stopwatch]::StartNew()
+    Remove-Item -Path $script:testFixtureTempDirPath -Recurse -Force -ErrorAction SilentlyContinue -ErrorVariable 'removeItemErrors'
+    Write-Verbose "$(Get-Date)  AfterAll  Deleted ${numItems} items from ${script:testFixtureTempDirPath} in $($timer.Elapsed) with $(($removeItemErrors | Measure-Object).Count) errors."
 }
 
 Describe 'InstallNodeJs' {
     BeforeEach {
-        $script:testRoot = New-WhiskeyTestRoot
+        $script:testRoot = Join-Path -Path $script:testFixtureTempDirPath -ChildPath ($script:testNum++)
+        New-Item -Path $script:testRoot -ItemType Directory
         $script:context = New-WhiskeyTestContext -ForDeveloper -ForBuildRoot $testRoot
         $script:fileCreatedTime = New-Object Collections.ArrayList
         $script:nodePath = Join-Path -Path $script:testRoot -ChildPath '.node'
         $Global:Error.Clear()
-    }
-
-    AfterEach {
-        $longestPath =
-            Get-ChildItem -Path $script:testRoot -Recurse | Sort-Object { $_.FullName.Length } | Select-Object -Last 1
-        if ($longestPath.FullName.Length -gt 260)
-        {
-            $msg = "Test created a file ""$($longestPath.FullName)"" whose path is $($longestPath.FullName.Length) " +
-                   "characters long, which is greater than Windows' max length of 260."
-            Write-Warning $msg
-
-            Invoke-WhiskeyPrivateCommand -Name 'Remove-WhiskeyFileSystemItem' -Parameter @{ Path = $script:testRoot }
-        }
     }
 
     It 'installs latest lts by default' -ForEach $latestNodeVersion {
