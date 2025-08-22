@@ -709,6 +709,14 @@ description 'Installs/Configures cookbook_name'
         ThenErrorIs ([regex]::Escape('Unable to locate property "version ''x.x.x''" in metadata.rb file'))
     }
 
+    It 'should read version from a Chef cookbook metadata file with LF line endings' {
+        GivenFile 'metadata.rb' "name 'cookbook_name'`n`nversion '1.0.0'`n"
+        WhenRunningTask -WithProperties @{ Path = 'metadata.rb' }
+        ThenVersionIs '1.0.0'
+        ThenSemVer1Is '1.0.0'
+        ThenSemVer2Is '1.0.0'
+    }
+
     It 'should use source branch name for prerelease branch matching when building a pull request' {
         GivenCurrentVersion '1.0.0'
         GivenBranch 'one'
