@@ -236,6 +236,8 @@ The `Uri` property on the `NuGetPush`, `PublishBitbucketServerTag`, and `Publish
   task is run. The proper way for a task to fail a build is to throw a terminating error by calling `Stop-WhiskeyError`.
 * `TaskDefaults` task fails to set default properties using task aliases.
 * Debug output wasn't disabled when the `.Debug` property is set to `false` on a task.
+* `Version` task fails to resolve version from a Chef cookbook `metadata.rb` file when that file uses line feed (LF)
+  line endings.
 
 ### Removed
 

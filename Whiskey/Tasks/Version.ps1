@@ -301,10 +301,10 @@ function Set-WhiskeyVersion
                     }
                 }
             }
-            elseif( $fileInfo.Name -eq 'metadata.rb' )
+            elseif($fileInfo.Name -eq 'metadata.rb')
             {
-                $metadataContent = Get-Content -Path $Path -Raw
-                $metadataContent = $metadataContent.Split([Environment]::NewLine) | Where-Object { $_ -ne '' }
+                $metadataContent = Get-Content -Path $Path
+                $metadataContent = $metadataContent | Where-Object { $_ }
 
                 $rawVersion = $null
                 foreach( $line in $metadataContent )
