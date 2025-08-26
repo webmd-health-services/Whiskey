@@ -602,3 +602,25 @@ function RunsCommandThatSetsLastExitCodeTo1
         Invoke-Expression 'powershell -NoProfile -NonInteractive -Command ''exit 1'''
     }
 }
+
+function AliasedTaskWithMandatoryParameter
+{
+    [Whiskey.Task('AliasedTaskWithMandatoryParameter',Aliases='AliasedTaskWithMandatoryParameter2')]
+    param(
+        [Whiskey.Context]$TaskContext,
+        [hashtable]$TaskParameter,
+        [String] $Mandatory,
+        [string] $AnotherMandatory
+    )
+
+    if (-not $Mandatory)
+    {
+        Stop-WhiskeyTask "MandatoryParmaeter parameter is missing or doesn't have a value."
+    }
+
+    if (-not $AnotherMandatory)
+    {
+        Stop-WhiskeyTask "MandatoryParmaeter parameter is missing or doesn't have a value."
+    }
+}
+

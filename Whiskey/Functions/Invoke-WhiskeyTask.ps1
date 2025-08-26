@@ -126,12 +126,19 @@ function Invoke-WhiskeyTask
             Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
             return
         }
-        if( $task -and $task.WarnWhenUsingAlias )
+
+        if ($task)
         {
-            $msg = "Task ""${Name}"" is an alias to task ""$($task.Name)"". Please update " +
-                   """$()"" to use the task''s actual name, ""$($task.Name)"", instead " +
-                   'of the alias.'
-            Write-WhiskeyWarning -Context $TaskContext -Message $msg
+            # Update name to be the actual task name.
+            $Name = $task.Name
+
+            if ($task.WarnWhenUsingAlias)
+            {
+                $msg = "Task ""${Name}"" is an alias to task ""$($task.Name)"". Please update " +
+                       """${whiskeyYmlDisplayPath}"" to use the task''s actual name, ""$($task.Name)"", instead " +
+                       'of the alias.'
+                Write-WhiskeyWarning -Context $TaskContext -Message $msg
+            }
         }
     }
 
