@@ -577,6 +577,13 @@ Describe 'Invoke-WhiskeyTask' {
         ThenTaskRan 'NoOpTask' -WithParameter @{ 'Fubar' = @{ 'Snfau' = 'myvalue'; 'Key2' = 'value1' }; 'Key3' = 'Value3'; 'NotADefault' = 'NotADefault' }
     }
 
+    It 'applies task defaults for aliased task' {
+        $taskProps = @{ Mandatory = 'mandatory'; AnotherMandatory = 'anothermandatory'; }
+        GivenDefaults $taskProps -ForTask 'AliasedTaskWithMandatoryParameter'
+        WhenRunningTask 'AliasedTaskWithMandatoryParameter2'
+        ThenPipelineSucceeded
+    }
+
     It 'should run OnlyBy Developer task' {
         GivenRunByBuildServer
         WhenRunningMockedTask 'NoOpTask' -Parameter @{ 'Path' = 'somefile.ps1'; '.OnlyBy' = 'Developer' }
