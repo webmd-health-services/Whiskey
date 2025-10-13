@@ -69,7 +69,6 @@ $pester4Tests = @(
     'LoadTask.Tests.ps1',
     'New-WhiskeyContext.Tests.ps1',
     'PublishPowerShellModule.Tests.ps1',
-    'PublishPowerShellScript.Tests.ps1',
     'Resolve-WhiskeyDotnetSdkVersion.Tests.ps1',
     'Resolve-WhiskeyNodeModulePath.Tests.ps1',
     'Resolve-WhiskeyNodePath.Tests.ps1',
