@@ -119,12 +119,12 @@ BeforeAll {
     function ThenTaskFails
     {
         Param(
-            [String]$error
+            [String]$WithError
         )
 
         $script:threwException | Should -BeTrue
 
-        $Global:Error | Should -Match $error
+        $Global:Error | Should -Match $WithError
     }
 
     function ThenTaskSucceeds
