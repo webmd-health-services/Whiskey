@@ -206,6 +206,7 @@ Build:
 * Renamed `PublishBuildMasterPackage` task to `PublishBuildMasterBuild` along with these properties:
   * `PackageVariable` to `Variable`
   * `PackageName` to `BuildNumber`
+* Zip task now pins to Zip `1.*` by default (from `0.3.*`).
 
 ### Deprecated
 

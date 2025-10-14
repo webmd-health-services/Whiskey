@@ -1,10 +1,5 @@
 
 Build:
-- TaskDefaults:
-    Pester4:
-        .Verbose: false
-        Version: 4.*
-
 - Version:
     Path: Whiskey\Whiskey.psd1
     PowerShellModuleName: Whiskey
