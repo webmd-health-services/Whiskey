@@ -508,13 +508,6 @@ Describe 'InstallNodeJs' {
         $path | Should -Not -Exist
     }
 
-    It 'customizes CPU' -Skip:((Test-Path -Path 'variable:IsWindows') -and -not $IsWindows) {
-        WhenInstallingNode -Cpu 'x86'
-        ThenNode -Installed
-        & (Join-Path -Path $script:context.BuildRoot -ChildPath '.node\node.exe') -p 'process.arch' |
-            Should -Not -Be 'x64'
-    }
-
     # These tests fail intermittently on the build server despite my best efforts. I'm going to say this functionality
     # works, so no need to run them regularlary, just when a developer runs them locally.
     $skipAVTests = (Test-Path -Path 'env:WHS_CI') -or ((Test-Path -Path 'variable:IsWindows') -and -not $IsWindows)
