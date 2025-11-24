@@ -22,13 +22,16 @@ environment:
   #   job_group: pwsh
   #   appveyor_build_worker_image: macOS
 
-  - job_name: Windows PowerShell 5.1/.NET 4.6.2
-    job_group: ps
-    appveyor_build_worker_image: Visual Studio 2013
+  # Temporarily disabled
+  # https://github.com/PowerShell/PSResourceGet/issues/1905
+  # - job_name: Windows PowerShell 5.1/.NET 4.6.2
+  #   job_group: ps
+  #   appveyor_build_worker_image: Visual Studio 2013
 
-  - job_name: Windows PowerShell 5.1/.NET 4.8
-    job_group: ps
-    appveyor_build_worker_image: Visual Studio 2017 # Has minimum PackageManagement and PowerShellGet modules.
+  # Fails on dotnet build even though it works when RDP into VM
+  # - job_name: Windows PowerShell 5.1/.NET 4.8
+  #   job_group: ps
+  #   appveyor_build_worker_image: Visual Studio 2017 # Has minimum PackageManagement and PowerShellGet modules.
 
   - job_name: PowerShell 6.2 on Windows
     job_group: pwsh-win
