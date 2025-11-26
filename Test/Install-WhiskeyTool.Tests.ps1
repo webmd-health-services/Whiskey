@@ -341,14 +341,20 @@ Describe 'Install-WhiskeyTool' {
             Remove-Node -BuildRoot $script:testRoot
         }
 
-        It 'should install Node and the node module and set Node tool path' {
+        # Starting with Node.js 24.x.x only supported on Windows 10 and Server 2016 or higher.
+        $is2012R2 = $false
+        if ($IsWindows -and ((Get-CimInstance Win32_OperatingSystem).Caption -like "*Windows Server 2012 R2*"))
+        {
+            $is2012R2 = $true
+        }
+        It 'should install Node and the node module and set Node tool path' -Skip:$is2012R2 {
             WhenInstallingTool 'Node' -PathParameterName 'NodePath'
             ThenNodeInstalled -AtLatestVersion -AndPathParameterIs 'NodePath'
             WhenInstallingTool 'NodeModule::license-checker' -PathParameterName 'LicenseCheckerPath'
             ThenNodeModuleInstalled 'license-checker' -AndPathParameterIs 'LicenseCheckerPath'
         }
 
-        It 'should install Node and the node module' {
+        It 'should install Node and the node module' -Skip:$is2012R2 {
             WhenInstallingTool 'Node'
             ThenNodeInstalled -AtLatestVersion
             WhenInstallingTool 'NodeModule::license-checker'
@@ -366,14 +372,14 @@ Describe 'Install-WhiskeyTool' {
             ThenNodeModuleNotInstalled 'license-checker' -AndPathParameterIs 'LicenseCheckerPath'
         }
 
-        It 'should install custom version of module' {
+        It 'should install custom version of module' -Skip:$is2012R2 {
             Install-Node -BuildRoot $script:testRoot
             GivenVersionParameterName 'Fubar'
             WhenInstallingTool 'NodeModule::license-checker' @{ 'Fubar' = '25.0.0' } -Version '16.0.0'
             ThenNodeModuleInstalled 'license-checker' -AtVersion '25.0.0'
         }
 
-        It 'should install tool author''s versionof module' {
+        It 'should install tool author''s versionof module' -Skip:$is2012R2 {
             Install-Node -BuildRoot $script:testRoot
             WhenInstallingTool 'NodeModule::axios' @{ } -Version '0.21.1'
             ThenNodeModuleInstalled 'axios' -AtVersion '0.21.1'

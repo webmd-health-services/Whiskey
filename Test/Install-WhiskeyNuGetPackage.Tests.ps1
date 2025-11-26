@@ -147,7 +147,13 @@ Describe 'Install-WhiskeyNuGetPackage' {
             GivenNuGetSource $nugetSource
         }
 
-        It 'downloads NuGet.CommandLine' {
+        # Starting with Node.js 24.x.x only supported on Windows 10 and Server 2016 or higher.
+        $is2012R2 = $false
+        if ($IsWindows -and ((Get-CimInstance Win32_OperatingSystem).Caption -like "*Windows Server 2012 R2*"))
+        {
+            $is2012R2 = $true
+        }
+        It 'downloads NuGet.CommandLine' -Skip:$is2012R2 {
             $latestVersion = Get-NuGetPackageLatestVersion -PackageID 'NuGet.CommandLine'
             WhenDownloading 'NuGet.CommandLine'
             ThenDownloaded 'NuGet.CommandLine' -AtVersion $latestVersion
@@ -187,7 +193,7 @@ Describe 'Install-WhiskeyNuGetPackage' {
             ThenFile 'packages\NuGet.CommandLine.*' -Not -Exists
         }
 
-        It 'installs packages with dependencies' {
+        It 'installs packages with dependencies' -Skip:$is2012R2 {
             WhenDownloading 'NUnit.Console' -AtVersion '3.20.1'
             ThenDownloaded 'NUnit.Console' -AtVersion '3.20.1'
             $dependencies = @{

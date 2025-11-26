@@ -1,32 +1,25 @@
 
 Set-StrictMode -Version 'Latest'
 
-& (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
+BeforeAll {
+    Set-StrictMode -Version 'Latest'
 
-$force = $false
-$name = $null
-$testRoot = $null
+    & (Join-Path -Path $PSScriptRoot -ChildPath 'Initialize-WhiskeyTest.ps1' -Resolve)
 
-# Private Whiskey function. Define it so Pester doesn't complain about it not existing.
-function Remove-WhiskeyFileSystemItem
-{
-}
-
-function Init
-{
-    $Global:Error.Clear()
-    $script:testRoot = New-WhiskeyTestRoot
-    $script:name = $null
     $script:force = $false
-    CreatePackageJson
-    Install-Node -BuildRoot $script:testRoot
-}
+    $script:name = $null
+    $script:testRoot = $null
 
-function CreatePackageJson
-{
-    $packageJsonPath = Join-Path -Path $script:testRoot -ChildPath 'package.json'
+    # Private Whiskey function. Define it so Pester doesn't complain about it not existing.
+    function Remove-WhiskeyFileSystemItem
+    {
+    }
 
-    @"
+    function CreatePackageJson
+    {
+        $packageJsonPath = Join-Path -Path $script:testRoot -ChildPath 'package.json'
+
+@"
 {
     "name": "NPM-Test-App",
     "version": "0.0.1",
@@ -36,131 +29,138 @@ function CreatePackageJson
     "license": "MIT"
 } 
 "@ | Set-Content -Path $packageJsonPath -Force
-}
+    }
 
-function GivenName
-{
-    param(
-        $Module
-    )
-    $script:name = $Module
-}
-
-function GivenForce
-{
-    $script:force = $true
-}
-
-function GivenFailingNpmUninstall
-{
-    Mock -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey'
-}
-
-function GivenFailingRemoveItem
-{
-    Mock -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
-}
-
-function GivenInstalledModule
-{
-    param(
-        $Name
-    )
-
-    Push-Location $script:testRoot
-    try
+    function GivenName
     {
-        $parameter = @{
-            'Name' = $Name;
-            'BuildRootPath' = $script:testRoot;
+        param(
+            $Module
+        )
+        $script:name = $Module
+    }
+
+    function GivenForce
+    {
+        $script:force = $true
+    }
+
+    function GivenFailingNpmUninstall
+    {
+        Mock -CommandName 'Invoke-WhiskeyNpmCommand' -ModuleName 'Whiskey'
+    }
+
+    function GivenFailingRemoveItem
+    {
+        Mock -CommandName 'Remove-WhiskeyFileSystemItem' -ModuleName 'Whiskey'
+    }
+
+    function GivenInstalledModule
+    {
+        param(
+            $Name
+        )
+
+        Push-Location $script:testRoot
+        try
+        {
+            $parameter = @{
+                'Name' = $Name;
+                'BuildRootPath' = $script:testRoot;
+            }
+            Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyNodeModule' -Parameter $parameter | Out-Null
         }
-        Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyNodeModule' -Parameter $parameter | Out-Null
+        finally
+        {
+            Pop-Location
+        }
     }
-    finally
+
+    function WhenUninstallingNodeModule
     {
-        Pop-Location
+        [CmdletBinding()]
+        param()
+        
+        $parameter = $PSBoundParameters
+        $parameter['Name'] = $name
+        $parameter['BuildRootPath'] = $script:testRoot
+        $parameter['Force'] = $force
+
+        Push-Location $script:testRoot
+        try
+        {
+            Invoke-WhiskeyPrivateCommand -Name 'Uninstall-WhiskeyNodeModule' -Parameter $parameter
+        }
+        finally
+        {
+            Pop-Location
+        }
     }
-}
 
-function Reset
-{
-}
-
-function WhenUninstallingNodeModule
-{
-    [CmdletBinding()]
-    param()
-    
-    $parameter = $PSBoundParameters
-    $parameter['Name'] = $name
-    $parameter['BuildRootPath'] = $script:testRoot
-    $parameter['Force'] = $force
-
-    Push-Location $script:testRoot
-    try
+    function ThenModule
     {
-        Invoke-WhiskeyPrivateCommand -Name 'Uninstall-WhiskeyNodeModule' -Parameter $parameter
+        param(
+            [Parameter(Position=0)]
+            [String]$Name,
+
+            [Parameter(Mandatory,ParameterSetName='Exists')]
+            [switch]$Exists,
+
+            [Parameter(Mandatory,ParameterSetName='DoesNotExist')]
+            [switch]$DoesNotExist
+        )
+
+        $modulePath = Resolve-WhiskeyNodeModulePath -Name $Name -BuildRootPath $script:testRoot -ErrorAction Ignore
+
+        if ($Exists)
+        {
+            $modulePath | Should -Not -BeNullOrEmpty
+        }
+        else
+        {
+            $modulePath | Should -BeNullOrEmpty
+        }
     }
-    finally
+
+    function ThenNoErrorsWritten
     {
-        Pop-Location
+        $Global:Error | Where-Object { $_ -notmatch '\bnpm (notice|warn)\b' } | Should -BeNullOrEmpty
     }
-}
 
-function ThenModule
-{
-    param(
-        [Parameter(Position=0)]
-        [String]$Name,
-
-        [Parameter(Mandatory,ParameterSetName='Exists')]
-        [switch]$Exists,
-
-        [Parameter(Mandatory,ParameterSetName='DoesNotExist')]
-        [switch]$DoesNotExist
-    )
-
-    $modulePath = Resolve-WhiskeyNodeModulePath -Name $Name -BuildRootPath $script:testRoot -ErrorAction Ignore
-
-    if ($Exists)
+    function ThenErrorMessage
     {
-        $modulePath | Should -Not -BeNullOrEmpty
+        param(
+            $Message
+        )
+
+        $Global:Error | Should -Match $Message
     }
-    else
+}
+
+
+Describe 'Uninstall-WhiskeyNodeModule' {
+    BeforeEach {
+        $Global:Error.Clear()
+        $script:testRoot = New-WhiskeyTestRoot
+        $script:name = $null
+        $script:force = $false
+        CreatePackageJson
+        Install-Node -BuildRoot $script:testRoot
+    }
+
+    # Starting with Node.js 24.x.x only supported on Windows 10 and Server 2016 or higher.
+    $is2012R2 = $false
+    if ($IsWindows -and ((Get-CimInstance Win32_OperatingSystem).Caption -like "*Windows Server 2012 R2*"))
     {
-        $modulePath | Should -BeNullOrEmpty
+        $is2012R2 = $true
     }
-}
-
-function ThenNoErrorsWritten
-{
-    $Global:Error | Where-Object { $_ -notmatch '\bnpm (notice|warn)\b' } | Should -BeNullOrEmpty
-}
-
-function ThenErrorMessage
-{
-    param(
-        $Message
-    )
-
-    $Global:Error | Should -Match $Message
-}
-
-Describe 'Uninstall-WhiskeyNodeModule.when given module is not installed' {
-    AfterEach { Reset }
-    It 'should not fail' {
-        Init
+    It 'should not fail when given module is not installed.' -Skip:$is2012R2 {
         GivenName 'wrappy'
         WhenUninstallingNodeModule
         ThenNoErrorsWritten
         ThenModule 'wrappy' -DoesNotExist
     }
-}
 
-Describe 'Uninstall-WhiskeyNodeModule.when uninstalling an installed module' {
-    AfterEach { Reset }
-    It 'should remove the module' {
-        Init
+    It 'should remove the module when uninstalling an installed module.' -Skip:$is2012R2 {
         GivenInstalledModule 'wrappy'
         GivenInstalledModule 'pify'
         GivenName 'wrappy'
@@ -169,12 +169,8 @@ Describe 'Uninstall-WhiskeyNodeModule.when uninstalling an installed module' {
         ThenModule 'pify' -Exists
         ThenNoErrorsWritten
     }
-}
 
-Describe 'Uninstall-WhiskeyNodeModule.when given Force and npm uninstall fails to remove module' {
-    AfterEach { Reset }
-    It 'should ignore uninstall failures' {
-        Init
+    It 'should ignore uninstall failures when given Force and npm uninstall fails to remove module.' -Skip:$is2012R2 {
         GivenInstalledModule 'wrappy'
         GivenInstalledModule 'pify'
         GivenName 'wrappy'
@@ -185,24 +181,16 @@ Describe 'Uninstall-WhiskeyNodeModule.when given Force and npm uninstall fails t
         ThenModule 'pify' -Exists
         ThenNoErrorsWritten
     }
-}
 
-Describe 'Uninstall-WhiskeyNodeModule.when npm uninstall fails to remove module' {
-    AfterEach { Reset }
-    It 'should fail' {
-        Init
+    It 'should fail when npm uninstall fails to remove module.' -Skip:$is2012R2 {
         GivenInstalledModule 'wrappy'
         GivenName 'wrappy'
         GivenFailingNpmUninstall
         WhenUninstallingNodeModule -ErrorAction SilentlyContinue
         ThenErrorMessage 'Failed to remove Node module "wrappy"'
     }
-}
 
-Describe 'Uninstall-WhiskeyNodeModule.when given Force and manual removal fails' {
-    AfterEach { Reset }
-    It 'should fail' {
-        Init
+    It 'should fail when given Force and manual removal fails.' -Skip:$is2012R2 {
         GivenInstalledModule 'wrappy'
         GivenName 'wrappy'
         GivenForce

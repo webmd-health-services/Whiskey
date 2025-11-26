@@ -395,7 +395,13 @@ Describe 'InstallNodeJs' {
         $Global:Error.Clear()
     }
 
-    It 'installs latest lts by default' -ForEach $latestNodeVersion {
+    # Starting with Node.js 24.x.x only supported on Windows 10 and Server 2016 or higher.
+    $is2012R2 = $false
+    if ($IsWindows -and ((Get-CimInstance Win32_OperatingSystem).Caption -like "*Windows Server 2012 R2*"))
+    {
+        $is2012R2 = $true
+    }
+    It 'installs latest lts by default' -Skip:$is2012R2 -ForEach $latestNodeVersion {
         GivenPackageJsonFile
         WhenInstallingNode -InformationVariable 'infoMsgs'
         ThenNode -Installed -AtVersion $_
@@ -488,7 +494,7 @@ Describe 'InstallNodeJs' {
         $Global:Error | Select-Object -First 2 | Select-Object -Last 1 | Should -Match 'NotFound'
     }
 
-    It 'upgrades' {
+    It 'upgrades' -Skip:$is2012R2 {
         $firstLtsVersion = $currentLtsVersions | Select-Object -Last 1 | Select-Object -Expand 'version'
         $firstLtsVersion = $firstLtsVersion.TrimStart('v')
         $lastLtsVersion = $currentLtsVersions | Select-Object -First 1 | Select-Object -Expand 'version'
