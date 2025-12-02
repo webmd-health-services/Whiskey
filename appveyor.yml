@@ -10,6 +10,7 @@ build:
 test: false
 
 environment:
+  APPVEYOR_RDP_PASSWORD: SomePass123!
   WHISKEY_DISABLE_ERROR_FORMAT: True
   matrix:
   # TODO: Get builds working on PowerShell 7.2 on Windows.
@@ -33,17 +34,21 @@ environment:
   #   job_group: ps
   #   appveyor_build_worker_image: Visual Studio 2017 # Has minimum PackageManagement and PowerShellGet modules.
 
-  - job_name: PowerShell 6.2 on Windows
-    job_group: pwsh-win
-    appveyor_build_worker_image: Visual Studio 2015
+  - job_name: Windows PowerShell 5.1/.NET 4.8
+    job_group: ps
+    appveyor_build_worker_image: Previous Visual Studio 2017
 
-  - job_name: PowerShell 7.2 on Ubuntu
-    job_group: pwsh-nix
-    appveyor_build_worker_image: Ubuntu2004
+  # - job_name: PowerShell 6.2 on Windows
+  #   job_group: pwsh-win
+  #   appveyor_build_worker_image: Visual Studio 2015
 
-  - job_name: PowerShell 7.1 on Windows
-    job_group: pwsh-win
-    appveyor_build_worker_image: Visual Studio 2019
+  # - job_name: PowerShell 7.2 on Ubuntu
+  #   job_group: pwsh-nix
+  #   appveyor_build_worker_image: Ubuntu2004
+
+  # - job_name: PowerShell 7.1 on Windows
+  #   job_group: pwsh-win
+  #   appveyor_build_worker_image: Visual Studio 2019
 
 
 artifacts:
@@ -60,23 +65,19 @@ for:
         dir env:
         try
         {
+            $Global:VerbosePreference = 'Continue'
             iwr https://raw.githubusercontent.com/webmd-health-services/Prism/main/Scripts/init.ps1 | iex | Format-Table
             .\build.ps1
         }
         finally
         {
-            # $Global:Error | Format-List * -Force
+            $Global:Error | Format-List * -Force
         }
   on_finish:
   - ps: &format_test_results |
       .\Format-PesterResult.ps1 -Path './.output/pester*.xml' -QueueDuration '00:10:00'
   - ps: &enable_rdp |
-      if ((Test-Path -Path 'env:ENABLE_RDP') -and $env:ENABLE_RDP -eq 'True')
-      {
-        $blockRdp = $true
-        $nonat = $false
-        iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
-      }
+      $blockRdp = $true; $nonat = $false; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
 
 
 # Build in PowerShell

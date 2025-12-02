@@ -184,7 +184,7 @@ which dotnet
             ('/flp9:LogFile={0};Verbosity=d' -f (Join-Path -Path $outputDirectory -ChildPath 'msbuild.whiskey.log'))
         }
 
-        Write-Verbose "dotnet build --configuration=$($MSBuildConfiguration) $($params -join ' ')"
+        Write-Verbose "dotnet build $($params -join ' ')"
         dotnet build $params
 
         dotnet test $params --results-directory=$outputDirectory --logger=trx --no-build
