@@ -40,10 +40,11 @@ param(
     [switch] $SkipBootstrap
 )
 
-$ErrorActionPreference = 'Stop'
-$ProgressPreference = 'SilentlyContinue'
 #Requires -Version 5.1
 Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+$InformationPreference = 'Continue'
 
 if( -not $SkipBootstrap )
 {
@@ -118,9 +119,14 @@ if( -not $SkipBootstrap )
     {
         $dotnetInstallPath = Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.ps1'
         # SDK
-        & $dotnetInstallPath -Channel 'LTS'
+        # The `dotnet build` from .NET 10 SDK fails with exit code -1, so pinning to .NET 8.0 SDK.
+        # * https://github.com/dotnet/sdk/issues/51982
+        # * https://help.appveyor.com/discussions/problems/38662-the-dotnet-build-command-from-net-sdk-10-fails-with-exit-code-1-when-run-by-appveyor-service
+        Write-Information "& ""${dotnetInstallPath}"" -Channel '8.0'"
+        & $dotnetInstallPath -Channel '8.0'
         # Runtime for tests
-        & $dotnetInstallPath -Channel '6.0' -Runtime dotnet
+        Write-Information "& ""${dotnetInstallPath}"" -Channel '6.0' -Runtime 'dotnet'"
+        & $dotnetInstallPath -Channel '6.0' -Runtime 'dotnet'
     }
     else
     {
@@ -157,8 +163,12 @@ which dotnet
         exit 1
     }
 
+    Write-Information (Get-Command -Name 'dotnet').Source
+    dotnet --info
+
     $versionSuffix = '{0}{1}' -f $prereleaseInfo,$buildInfo
     $productVersion = '{0}{1}' -f $version,$versionSuffix
+
     Push-Location -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assembly')
     try
     {

@@ -10,7 +10,6 @@ build:
 test: false
 
 environment:
-  APPVEYOR_RDP_PASSWORD: SomePass123!
   WHISKEY_DISABLE_ERROR_FORMAT: True
   matrix:
   # TODO: Get builds working on PowerShell 7.2 on Windows.
@@ -36,7 +35,7 @@ environment:
 
   - job_name: Windows PowerShell 5.1/.NET 4.8
     job_group: ps
-    appveyor_build_worker_image: Previous Visual Studio 2017
+    appveyor_build_worker_image: Visual Studio 2017
 
   # - job_name: PowerShell 6.2 on Windows
   #   job_group: pwsh-win
@@ -62,10 +61,28 @@ for:
     - job_group: ps
   build_script:
   - ps: &build_script |
+        $ProgressPreference = 'SilentlyContinue'
+        Invoke-WebRequest -Uri 'https://live.sysinternals.com/procexp.exe' -OutFile '~/Desktop/procexp.exe'
+        Invoke-WebRequest -Uri 'https://live.sysinternals.com/procmon.exe' -OutFile '~/Desktop/procmon.exe'
+
+        if ((Test-Path -Path 'env:ENABLE_RDP') -and $env:ENABLE_RDP -eq 'True')
+        {
+          $blockRdp = $false
+          if ((Test-Path -Path 'env:BLOCK_RDP_ON_START') -and $env:BLOCK_RDP_ON_START -eq 'True')
+          {
+            $blockRdp = $true
+          }
+          $nonat = $false
+          iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+        }
+
         dir env:
         try
         {
-            $Global:VerbosePreference = 'Continue'
+            if ((Test-Path -Path 'env:ENABLE_VERBOSE') -and $env:ENABLE_VERBOSE -eq 'True')
+            {
+              $Global:VerbosePreference = 'Continue'
+            }
             iwr https://raw.githubusercontent.com/webmd-health-services/Prism/main/Scripts/init.ps1 | iex | Format-Table
             .\build.ps1
         }
@@ -76,9 +93,17 @@ for:
   on_finish:
   - ps: &format_test_results |
       .\Format-PesterResult.ps1 -Path './.output/pester*.xml' -QueueDuration '00:10:00'
-  - ps: &enable_rdp |
-      $blockRdp = $true; $nonat = $false; iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
-
+  - ps: &enable_rdp_on_finish |
+      if ((Test-Path -Path 'env:ENABLE_RDP') -and $env:ENABLE_RDP -eq 'True')
+      {
+        $blockRdp = $false
+        if ((Test-Path -Path 'env:BLOCK_RDP_ON_FINISH') -and $env:BLOCK_RDP_ON_FINISH -eq 'True')
+        {
+          $blockRdp = $true
+        }
+        $nonat = $false
+        iex ((new-object net.webclient).DownloadString('https://raw.githubusercontent.com/appveyor/ci/master/scripts/enable-rdp.ps1'))
+      }
 
 # Build in PowerShell
 - matrix:
@@ -88,7 +113,7 @@ for:
   - pwsh: *build_script
   on_finish:
   - pwsh: *format_test_results
-  - pwsh: *enable_rdp
+  - pwsh: *enable_rdp_on_finish
 
 - matrix:
     only:
