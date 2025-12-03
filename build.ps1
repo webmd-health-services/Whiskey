@@ -194,8 +194,16 @@ which dotnet
             ('/flp9:LogFile={0};Verbosity=d' -f (Join-Path -Path $outputDirectory -ChildPath 'msbuild.whiskey.log'))
         }
 
-        Write-Verbose "dotnet build $($params -join ' ')"
-        dotnet build $params
+        Write-Verbose "Current LASTEXITCODE ${LASTEXITCODE}" -Verbose
+        Write-Verbose "dotnet build $($params -join ' ')" -Verbose
+        try
+        {
+            dotnet build $params
+        }
+        finally
+        {
+            Write-Verbose "  dotnet build exited with ${LASTEXITCODE}." -Verbose
+        }
 
         dotnet test $params --results-directory=$outputDirectory --logger=trx --no-build
         if( $LASTEXITCODE )
