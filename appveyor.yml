@@ -99,6 +99,8 @@ for:
             $Global:Error | Format-List * -Force
         }
   on_finish:
+  - ps: &push_logs |
+      Get-ChildItem .\.output\*.log | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name }
   - ps: &format_test_results |
       .\Format-PesterResult.ps1 -Path './.output/pester*.xml' -QueueDuration '00:10:00'
   - ps: &enable_rdp_on_finish |
@@ -129,6 +131,7 @@ for:
   build_script:
   - pwsh: *build_script
   on_finish:
+  - pwsh: *push_logs
   - pwsh: *format_test_results
   - sh: &enable_ssh |
       if [ "${ENABLE_RDP,,}" = "true" ] ; then

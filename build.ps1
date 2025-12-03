@@ -191,7 +191,7 @@ which dotnet
                 '--verbosity=n'
             }
             '/filelogger9'
-            ('/flp9:LogFile={0};Verbosity=d' -f (Join-Path -Path $outputDirectory -ChildPath 'msbuild.whiskey.log'))
+            ('/flp9:LogFile={0};Verbosity=diag' -f (Join-Path -Path $outputDirectory -ChildPath 'msbuild.whiskey.log'))
         }
 
         Write-Verbose "Current LASTEXITCODE ${LASTEXITCODE}" -Verbose
@@ -202,6 +202,10 @@ which dotnet
         }
         finally
         {
+            # show that this command shows up in the output
+            Get-ChildItem -Path $PSScriptRoot | Out-String | Write-Verbose -Verbose
+            # show that a log file is not generated
+            Get-ChildItem -Path $outputDirectory | Out-String | Write-Verbose -Verbose
             Write-Verbose "  dotnet build exited with ${LASTEXITCODE}." -Verbose
         }
 
