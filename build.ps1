@@ -122,8 +122,8 @@ if( -not $SkipBootstrap )
         # The `dotnet build` from .NET 10 SDK fails with exit code -1, so pinning to .NET 8.0 SDK.
         # * https://github.com/dotnet/sdk/issues/51982
         # * https://help.appveyor.com/discussions/problems/38662-the-dotnet-build-command-from-net-sdk-10-fails-with-exit-code-1-when-run-by-appveyor-service
-        Write-Information "& ""${dotnetInstallPath}"" -Channel '8.0'"
-        & $dotnetInstallPath -Channel '8.0'
+        Write-Information "& ""${dotnetInstallPath}"" -Channel 'LTS'"
+        & $dotnetInstallPath -Channel 'LTS'
         # Runtime for tests
         Write-Information "& ""${dotnetInstallPath}"" -Channel '6.0' -Runtime 'dotnet'"
         & $dotnetInstallPath -Channel '6.0' -Runtime 'dotnet'
