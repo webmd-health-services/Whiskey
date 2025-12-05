@@ -78,7 +78,6 @@ $pester4Tests = @(
     'SetVariable.Tests.ps1',
     'SetVariableFromPowerShellDataFile.Tests.ps1',
     'SetVariableFromXml.Tests.ps1',
-    'Uninstall-WhiskeyNodeModule.Tests.ps1',
     'Uninstall-WhiskeyPowerShellModule.Tests.ps1'
 )
 
