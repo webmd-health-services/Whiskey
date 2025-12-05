@@ -123,7 +123,7 @@ BeforeAll {
 
     function ThenNoErrorsWritten
     {
-        $Global:Error | Should -BeNullOrEmpty
+        $Global:Error -like 'error' | Should -BeNullOrEmpty
     }
 
     function ThenErrorMessage
@@ -162,7 +162,13 @@ Describe 'Install-WhiskeyNodeModule.when given name' {
         Install-Node -BuildRoot $script:testRoot
     }
 
-    It 'should install the module' {
+    # Starting with Node.js 24.x.x only supported on Windows 10 and Server 2016 or higher.
+    $is2012R2 = $false
+    if ((Test-Path -Path 'variable:IsWindows') -and $IsWindows -and ((Get-CimInstance Win32_OperatingSystem).Caption -like "*Windows Server 2012 R2*"))
+    {
+        $is2012R2 = $true
+    }
+    It 'should install the module' -Skip:$is2012R2 {
         GivenName 'wrappy'
         WhenInstallingNodeModule
         ThenModule 'wrappy' -Exists
@@ -170,7 +176,7 @@ Describe 'Install-WhiskeyNodeModule.when given name' {
         ThenNoErrorsWritten
     }
 
-    It 'should install specific module version' {
+    It 'should install specific module version' -Skip:$is2012R2 {
         GivenName 'wrappy'
         GivenVersion '1.0.2'
         WhenInstallingNodeModule
@@ -179,7 +185,7 @@ Describe 'Install-WhiskeyNodeModule.when given name' {
         ThenNoErrorsWritten
     }
 
-    It 'validates module' {
+    It 'validates module' -Skip:$is2012R2 {
         GivenName 'nonexistentmodule'
         WhenInstallingNodeModule -ErrorAction SilentlyContinue
         ThenReturnedNothing

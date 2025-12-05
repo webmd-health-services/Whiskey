@@ -3,6 +3,10 @@
 
 # Whiskey Changelog
 
+## 0.63.0
+
+* Upgraded BuildMasterAutomation dependency to version 4.3.0 (from 4.2.0)
+
 ## 0.62.0
 
 ### Upgrade Instructions
