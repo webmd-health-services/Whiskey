@@ -3,6 +3,10 @@
 
 # Whiskey Changelog
 
+## 0.63.1
+
+* Fixed: MSBuild task chooses tools from SQL Server Management Studio 21 if it is installed.
+
 ## 0.63.0
 
 * Upgraded BuildMasterAutomation dependency to version 4.3.0 (from 4.2.0)
