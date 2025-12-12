@@ -96,6 +96,17 @@ function Get-MSBuild
 
     foreach( $instance in (Get-VSSetupInstance) )
     {
+        # SSMS versions 21+ are now included when retrieving instances of Visual Studio related products
+        # (ie. Get-VSSetupInstance). However the shipped version of MSBuild does not contains the required imports to
+        # build C# code. We're using the same logic as used by NuGet.exe so that we only consider Visual Studio
+        # installations: 
+        # https://github.com/NuGet/NuGet.Client/blob/dev/src/NuGet.Clients/NuGet.CommandLine/MsBuildToolset.cs#L73
+        # https://github.com/NuGet/NuGet.Client/pull/6530/changes#diff-8ac450991c576742dcf0cc4e3bace8a6fc8011d3a0bc0a8c782f53176e18acd6R71
+        if (-not $instance.InstallationName.StartsWith('VisualStudio', [StringComparison]::Ordinal))
+        {
+            continue
+        }
+
         $msbuildRoot = Join-Path -Path $instance.InstallationPath -ChildPath 'MSBuild'
         if( -not (Test-Path -Path $msbuildRoot -PathType Container) )
         {

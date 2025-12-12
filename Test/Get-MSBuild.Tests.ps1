@@ -71,20 +71,26 @@ BeforeAll {
     function GivenVersionInVisualStudio
     {
         param(
-            [String]$Version,
-            [String]$VSInstallRoot,
-            [String]$MSBuildPath,
-            [String]$MSBuildPath32
+            [String] $Version,
+            [String] $VSInstallRoot,
+            [String] $MSBuildPath,
+            [String] $MSBuildPath32,
+            [String] $DisplayName
         )
+
+        if (-not $DisplayName)
+        {
+            $DisplayName = 'Visual Studio'
+        }
 
         $script:vsInstances = & {
             $script:vsInstances
 
             [pscustomobject]@{
-                DisplayName = ('Visual Studio {0}' -f $Version)
+                DisplayName = ("${DisplayName} ${Version}")
                 InstallationPath = $VSInstallRoot
                 InstallationVersion = $Version
-
+                InstallationName = "$($DisplayName -replace '\s')/$Version"
             }
         }
 
@@ -365,5 +371,26 @@ Describe 'Get-MSBuild' {
             $result.Path32 | Should -HaveCount 1
             $result.Path32 | Should -Exist
         }
+    }
+    
+    It 'ignores MSBuild from SSMS as it does not contain required imports to build C#.' {
+        $vs19Root = Join-Path -Path $TestDrive -ChildPath 'Microsoft Visual Studio\2019\Professional'
+        GivenVersionInVisualStudio -Version '16.40' `
+                                    -VSInstallRoot $vs19Root `
+                                    -MSBuildPath ($vs19Msbuild = 'MSBuild\Current\Bin\amd64\MSBuild.exe') `
+                                    -MSBuildPath32 ($vs19Msbuild32 = 'MSBuild\Current\Bin\MSBuild.exe')
+
+        $ssms22BuildToolsRoot = Join-Path -Path $TestDrive -ChildPath 'Microsoft SQL Server Management Studio 22\Release'
+        GivenVersionInVisualStudio -Version '22.1' `
+                                   -VSInstallRoot $ssms22BuildToolsRoot `
+                                   -MSBuildPath 'MSBuild\Current\Bin\amd64\MSBuild.exe' `
+                                   -MSBuildPath32 'MSBuild\Current\Bin\MSBuild.exe' `
+                                   -DisplayName 'SQL Server Management Studio 22'
+        WhenGettingMSBuild
+        ThenReturnedExpectedObjects -Count 1
+        ThenFoundMSBuild '16.0' `
+                         -InstallPath (Join-Path -Path $vs19Root -ChildPath $vs19Msbuild) `
+                         -InstallPath32 (Join-Path -Path $vs19Root -ChildPath $vs19Msbuild32)
+        ThenErrorRecord -Empty
     }
 }
