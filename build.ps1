@@ -118,7 +118,7 @@ if( -not $SkipBootstrap )
     {
         $dotnetInstallPath = Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.ps1'
         # SDK
-        & $dotnetInstallPath -Channel 'LTS'
+        & $dotnetInstallPath -Channel '8.0'
         # Runtime for tests
         & $dotnetInstallPath -Channel '6.0' -Runtime dotnet
     }
