@@ -146,7 +146,7 @@ BeforeAll {
             Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith {
                 Write-WhiskeyDebug -Message 'http://httpstat.us/404'
                 $ProgressPreference = 'SilentlyContinue'
-                Invoke-WebRequest -Uri 'http://httpstat.us/404' -Headers @{ 'Accept' = 'text/html' }
+                Invoke-WebRequest -Uri 'http://httpstat.us/404' -Headers @{ 'Accept' = 'text/html' } -UseBasicParsing
             } -ParameterFilter { $Uri -notlike 'http://httpstat.us/*' }
         }
         elseif( $script:packageExistsCheckFails )
@@ -154,7 +154,7 @@ BeforeAll {
             Mock -CommandName 'Invoke-WebRequest' -ModuleName 'Whiskey' -MockWith {
                 Write-WhiskeyDebug -Message 'http://httpstat.us/500'
                 $ProgressPreference = 'SilentlyContinue'
-                Invoke-WebRequest -Uri 'http://httpstat.us/500' -Headers @{ 'Accept' = 'text/html' }
+                Invoke-WebRequest -Uri 'http://httpstat.us/500' -Headers @{ 'Accept' = 'text/html' } -UseBasicParsing
             } -ParameterFilter { $Uri -notlike 'http://httpstat.us/*' }
         }
         else
@@ -169,7 +169,9 @@ BeforeAll {
                     Write-WhiskeyDebug $global:counter
                     Write-WhiskeyDebug -Message 'http://httpstat.us/404'
                     $ProgressPreference = 'SilentlyContinue'
-                    Invoke-WebRequest -Uri 'http://httpstat.us/404' -Headers @{ 'Accept' = 'text/html' }
+                    Invoke-WebRequest -Uri 'http://httpstat.us/404' `
+                                      -Headers @{ 'Accept' = 'text/html' } `
+                                      -UseBasicParsing
                 }
                 $global:counter = 0
                 Write-WhiskeyDebug -Message 'http://httpstat.us/200'

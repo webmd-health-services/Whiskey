@@ -5,9 +5,13 @@
 
 ## 0.61.3
 
-Fixed: MSBuild task chooses tools from SQL Server Management Studio 21 if it is installed.
+* Fixed: MSBuild task chooses tools from SQL Server Management Studio 21 if it is installed.
+* Fixed: Whiskey prompts for confirmation from users on new versions of Windows when calling `Invoke-WebRequest`. All
+  usages of `Invoke-WebRequest` now use `-UseBasicParsing` switch.
 
 ## 0.61.2
+
+> Released 13 Aug 2025
 
 Fixed: MSBuild, NUnit2, and NUnit3 tasks fail on build servers with nuget.org as a NuGet source. Whiskey was using
 PowerShell's Package Management module to install NuGet package dependencies and the Package Management module doesn't

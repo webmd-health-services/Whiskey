@@ -13,7 +13,7 @@ function Install-WhiskeyNuGetPackage
     )
 
     # We don't want `Invoke-RestMethod` to throw a terminating error so wrap it in a try/catch block.
-    function Invoke-RestMethod
+    function Invoke-InvokeRestMethod
     {
         [CmdletBinding()]
         param(
@@ -23,7 +23,7 @@ function Install-WhiskeyNuGetPackage
         $numErrorsBefore = $Global:Error.Count
         try
         {
-            Microsoft.PowerShell.Utility\Invoke-RestMethod @PSBoundParameters
+            Invoke-RestMethod @PSBoundParameters
         }
         catch
         {
@@ -41,19 +41,18 @@ function Install-WhiskeyNuGetPackage
     }
 
     # We don't want `Invoke-WebRequest` to throw a terminating error so wrap it in a try/catch block.
-    function Invoke-WebRequest
+    function Invoke-InvokeWebRequest
     {
         [CmdletBinding()]
         param(
             [Uri] $Uri,
-            [switch] $UseBasicParsing,
             [String] $OutFile
         )
 
         $numErrorsBefore = $Global:Error.Count
         try
         {
-            Microsoft.PowerShell.Utility\Invoke-WebRequest @PSBoundParameters
+            Invoke-WebRequest @PSBoundParameters -UseBasicParsing
         }
         catch
         {
@@ -101,7 +100,7 @@ function Install-WhiskeyNuGetPackage
         $pkgIndex = $null
 
         Write-WhiskeyVerbose "GET ${pkgIndexUrl}"
-        $pkgIndex = Invoke-RestMethod -Uri $pkgIndexUrl -ErrorAction Ignore
+        $pkgIndex = Invoke-InvokeRestMethod -Uri $pkgIndexUrl -ErrorAction Ignore
 
         # It's a v2 endpoint.
         if (-not $pkgIndex)
@@ -120,7 +119,7 @@ function Install-WhiskeyNuGetPackage
         }
 
         $searchResources =
-            Invoke-RestMethod -Uri $pkgIndexUrl |
+            Invoke-InvokeRestMethod -Uri $pkgIndexUrl |
             Select-Object -ExpandProperty 'resources' -ErrorAction Ignore |
             Where-Object '@type' -EQ 'SearchQueryService'
         if (-not $searchResources)
@@ -143,7 +142,7 @@ function Install-WhiskeyNuGetPackage
             $searchUrl = "$($searchResource.'@id')?q=packageid:$([uri]::EscapeDataString($Name))"
             Write-WhiskeyVerbose "GET ${searchUrl}"
             $pkgInfo =
-                Invoke-RestMethod -Uri $searchUrl |
+                Invoke-InvokeRestMethod -Uri $searchUrl |
                 Select-Object -ExpandProperty 'data' -ErrorAction Ignore
             if ($pkgInfo)
             {
@@ -236,7 +235,7 @@ function Install-WhiskeyNuGetPackage
             }
 
             Write-WhiskeyVerbose "GET ${pkgRegUrl}"
-            $pkgReg = Invoke-RestMethod -Uri $pkgRegUrl
+            $pkgReg = Invoke-InvokeRestMethod -Uri $pkgRegUrl
             if (-not $pkgReg)
             {
                 [void]$failures.Add("failed to download that packages's registration information from ${pkgRegUrl}")
@@ -257,7 +256,7 @@ function Install-WhiskeyNuGetPackage
                     Select-Object -ExpandProperty '@id' -ErrorAction Ignore |
                     ForEach-Object {
                         Write-WhiskeyVerbose "GET ${_}"
-                        Invoke-RestMethod -Uri $_
+                        Invoke-InvokeRestMethod -Uri $_
                     } |
                     Select-Object -ExpandProperty 'items' -ErrorAction Ignore
 
@@ -295,7 +294,7 @@ function Install-WhiskeyNuGetPackage
                 $destinationPath = Join-Path -Path ($packagesPath | Resolve-Path -Relative) -ChildPath $destinationPath
                 Write-WhiskeyInfo "Saving NuGet package ${Name} ${resolvedVersion} to ""${destinationPath}""."
                 Write-WhiskeyVerbose "GET ${pkgDownloadUrl}"
-                Invoke-WebRequest -UseBasicParsing -Uri $pkgDownloadUrl -OutFile $nupkgPath
+                Invoke-InvokeWebRequest -Uri $pkgDownloadUrl -OutFile $nupkgPath
 
                 if( (Test-Path -Path $nupkgPath) )
                 {
