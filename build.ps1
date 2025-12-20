@@ -111,7 +111,7 @@ if( -not $SkipBootstrap )
         $toolPath = Join-Path -Path $whiskeyBinPath -ChildPath $url.Segments[-1]
         $msg = "Installing ""$($toolPath)"" from $($url)."
         Write-Information $msg
-        Invoke-WebRequest -Uri $url -OutFile $toolPath
+        Invoke-WebRequest -Uri $url -OutFile $toolPath -UseBasicParsing
     }
 
     if( $IsWindows )
