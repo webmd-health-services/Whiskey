@@ -3,6 +3,10 @@
 
 # Whiskey Changelog
 
+## 0.61.3
+
+Fixed: MSBuild task chooses tools from SQL Server Management Studio 21 if it is installed.
+
 ## 0.61.2
 
 Fixed: MSBuild, NUnit2, and NUnit3 tasks fail on build servers with nuget.org as a NuGet source. Whiskey was using
