@@ -97,7 +97,6 @@ Build:
                     - Test\Install-WhiskeyDotNetTool.Tests.ps1
                     - Test\Invoke-WhiskeyTask.Tests.ps1
                     - Test\Parallel.Tests.ps1
-                    - Test\PublishNodeModule.Tests.ps1
                     - Test\Version.Tests.ps1
         - Pester4:
             Script:
@@ -162,7 +161,6 @@ Build:
                     - "*/Test/Parallel.Tests.ps1"
                     - "*/Test/PowerShell.Tests.ps1"
                     - "*/Test/ProGetUniversalPackage.Tests.ps1"
-                    - "*/Test/PublishNodeModule.Tests.ps1"
                     - "*/Test/PublishPowerShellModule.Tests.ps1"
                     - "*/Test/Version.Tests.ps1"
                     - "*/Test/Zip.Tests.ps1"
@@ -338,7 +336,6 @@ Build:
                     Path:
                     - Test\Install-WhiskeyTool.Tests.ps1
                     - Test\Parallel.Tests.ps1
-                    - Test\PublishNodeModule.Tests.ps1
                     - Test\Pester.Tests.ps1
     - Tasks:
         - Pester:
@@ -402,7 +399,6 @@ Build:
                     - "*\\Test\\Pester.Tests.ps1"
                     - "*\\Test\\PowerShell.Tests.ps1"
                     - "*\\Test\\ProGetUniversalPackage.Tests.ps1"
-                    - "*\\Test\\PublishNodeModule.Tests.ps1"
                     - "*\\Test\\PublishPowerShellModule.Tests.ps1"
                     - "*\\Test\\Resolve-WhiskeyNodePath.Tests.ps1"
                     - "*\\Test\\Uninstall-WhiskeyNodeModule.Tests.ps1"
