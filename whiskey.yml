@@ -189,7 +189,6 @@ Build:
                     - "*/Test/Import-WhiskeyPowerShellModule.Tests.ps1"
                     - "*/Test/Import-WhiskeyYaml.Tests.ps1"
                     - "*/Test/Install-WhiskeyNode.Tests.ps1"
-                    - "*/Test/Install-WhiskeyNodeModule.Tests.ps1"
                     - "*/Test/InstallNode.Tests.ps1"
                     - "*/Test/Invoke-WhiskeyDotNetCommand.Tests.ps1"
                     - "*/Test/Invoke-WhiskeyNpmCommand.Tests.ps1"
@@ -238,7 +237,6 @@ Build:
             - "Test/Import-Whiskey.ps1.Tests.ps1"
             - "Test/Import-WhiskeyPowerShellModule.Tests.ps1"
             - "Test/Import-WhiskeyYaml.Tests.ps1"
-            - "Test/Install-WhiskeyNodeModule.Tests.ps1"
             - "Test/InstallNode.Tests.ps1"
             - "Test/Invoke-WhiskeyDotNetCommand.Tests.ps1"
             - "Test/Invoke-WhiskeyNpmCommand.Tests.ps1"
@@ -326,7 +324,6 @@ Build:
             - Test\ConvertFrom-WhiskeyYamlScalar.Tests.ps1
             - Test\DotNet.Tests.ps1
             - Test\GetPowerShellModule.Tests.ps1
-            - Test\Install-WhiskeyNodeModule.Tests.ps1
     - Tasks:
         - Pester:
             AsJob: true
@@ -389,7 +386,6 @@ Build:
                     - "*\\Test\\GetPowerShellModule.Tests.ps1"
                     - "*\\Test\\Install-WhiskeyDotNetTool.Tests.ps1"
                     - "*\\Test\\Install-WhiskeyNode.Tests.ps1"
-                    - "*\\Test\\Install-WhiskeyNodeModule.Tests.ps1"
                     - "*\\Test\\Install-WhiskeyPowerShellModule.Tests.ps1"
                     - "*\\Test\\Install-WhiskeyTool.Tests.ps1"
                     - "*\\Test\\Invoke-WhiskeyBuild.Tests.ps1"
@@ -478,7 +474,6 @@ Build:
             - "Test\\Import-WhiskeyPowerShellModule.Tests.ps1"
             - "Test\\Import-WhiskeyYaml.Tests.ps1"
             - "Test\\Install-WhiskeyDotNetSdk.Tests.ps1"
-            - "Test\\Install-WhiskeyNodeModule.Tests.ps1"
             - "Test\\InstallNode.Tests.ps1"
             - "Test\\Invoke-WhiskeyDotNetCommand.Tests.ps1"
             - "Test\\Invoke-WhiskeyNpmCommand.Tests.ps1"

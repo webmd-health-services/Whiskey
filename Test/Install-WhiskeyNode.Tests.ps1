@@ -324,7 +324,13 @@ Describe 'Install-WhiskeyNode' {
         $Global:DebugPreference = 'SilentlyContinue'
     }
 
-    It 'should install Node.js' {
+    # Starting with Node.js 24.x.x only supported on Windows 10 and Server 2016 or higher.
+    $is2012R2 = $false
+    if ((Test-Path -Path 'variable:IsWindows') -and $IsWindows -and ((Get-CimInstance Win32_OperatingSystem).Caption -like "*Windows Server 2012 R2*"))
+    {
+        $is2012R2 = $true
+    }
+    It 'should install Node.js' -Skip:$is2012R2 {
         WhenInstallingTool
         ThenNodeInstalled -AtLatestVersion -AndArchiveFileExists
     }
@@ -396,7 +402,7 @@ Describe 'Install-WhiskeyNode' {
         ThenNodeInstalled 'v8.8.1' -NpmVersion '5.4.2' -AndArchiveFileExists
     }
 
-    It 'should update NPM' {
+    It 'should update NPM' -Skip:$is2012R2 {
         GivenPackageJson @'
 {
     "engines": {
@@ -408,7 +414,7 @@ Describe 'Install-WhiskeyNode' {
         ThenNodeInstalled -AtLatestVersion -NpmVersion '5.6.0' -AndArchiveFileExists
     }
 
-    It 'should use installed version of Node' {
+    It 'should use installed version of Node' -Skip:$is2012R2 {
         WhenInstallingTool
         ThenNodeInstalled -AtLatestVersion -AndArchiveFileExists
 
@@ -451,7 +457,7 @@ Describe 'Install-WhiskeyNode' {
         ThenNothingReturned
     }
 
-    It 'should not clean Node.js' {
+    It 'should not clean Node.js' -Skip:$is2012R2 {
         Install-Node -BuildRoot $script:testRoot
         WhenInstallingTool -InCleanMode
         ThenNodeInstalled -AtLatestVersion
