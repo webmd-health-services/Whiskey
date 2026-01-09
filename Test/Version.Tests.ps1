@@ -435,7 +435,13 @@ Describe 'Version' {
         ThenSemVer2Is '4.2.3-rc.1'
     }
 
-    It 'should get latest version from NPM registry' {
+    # Starting with Node.js 24.x.x only supported on Windows 10 and Server 2016 or higher.
+    $is2012R2 = $false
+    if ((Test-Path -Path 'variable:IsWindows') -and $IsWindows -and ((Get-CimInstance Win32_OperatingSystem).Caption -like "*Windows Server 2012 R2*"))
+    {
+        $is2012R2 = $true
+    }
+    It 'should get latest version from NPM registry' -Skip:$is2012R2 {
         Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyNode' `
                                      -Parameter @{ InstallRootPath = $testRoot ; OutFileRootPath = $testRoot }
         GivenFile 'package.json' '{ "name": "react-native", "version": "0.68.0-rc.0" }'

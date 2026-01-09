@@ -40,10 +40,11 @@ param(
     [switch] $SkipBootstrap
 )
 
-$ErrorActionPreference = 'Stop'
-$ProgressPreference = 'SilentlyContinue'
 #Requires -Version 5.1
 Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+$InformationPreference = 'Continue'
 
 if( -not $SkipBootstrap )
 {
@@ -101,7 +102,7 @@ if( -not $SkipBootstrap )
     }
 
     [Uri[]] $binToolUrls = @(
-        'https://dist.nuget.org/win-x86-commandline/latest/nuget.exe',
+        'https://dist.nuget.org/win-x86-commandline/v6.10.2/nuget.exe',
         'https://dot.net/v1/dotnet-install.sh',
         'https://dot.net/v1/dotnet-install.ps1'
     )
@@ -111,16 +112,21 @@ if( -not $SkipBootstrap )
         $toolPath = Join-Path -Path $whiskeyBinPath -ChildPath $url.Segments[-1]
         $msg = "Installing ""$($toolPath)"" from $($url)."
         Write-Information $msg
-        Invoke-WebRequest -Uri $url -OutFile $toolPath
+        Invoke-WebRequest -Uri $url -OutFile $toolPath -UseBasicParsing
     }
 
     if( $IsWindows )
     {
         $dotnetInstallPath = Join-Path -Path $whiskeyBinPath -ChildPath 'dotnet-install.ps1'
         # SDK
-        & $dotnetInstallPath -Channel 'LTS'
+        # The `dotnet build` from .NET 10 SDK fails with exit code -1, so pinning to .NET 8.0 SDK.
+        # * https://github.com/dotnet/sdk/issues/51982
+        # * https://help.appveyor.com/discussions/problems/38662-the-dotnet-build-command-from-net-sdk-10-fails-with-exit-code-1-when-run-by-appveyor-service
+        Write-Information "& ""${dotnetInstallPath}"" -Channel '8.0'"
+        & $dotnetInstallPath -Channel '8.0'
         # Runtime for tests
-        & $dotnetInstallPath -Channel '6.0' -Runtime dotnet
+        Write-Information "& ""${dotnetInstallPath}"" -Channel '6.0' -Runtime 'dotnet'"
+        & $dotnetInstallPath -Channel '6.0' -Runtime 'dotnet'
     }
     else
     {
@@ -157,6 +163,9 @@ which dotnet
         exit 1
     }
 
+    Write-Information (Get-Command -Name 'dotnet').Source
+    dotnet --info
+
     $versionSuffix = '{0}{1}' -f $prereleaseInfo,$buildInfo
     $productVersion = '{0}{1}' -f $version,$versionSuffix
     Push-Location -Path (Join-Path -Path $PSScriptRoot -ChildPath 'Assembly')
@@ -184,7 +193,7 @@ which dotnet
             ('/flp9:LogFile={0};Verbosity=d' -f (Join-Path -Path $outputDirectory -ChildPath 'msbuild.whiskey.log'))
         }
 
-        Write-Verbose "dotnet build --configuration=$($MSBuildConfiguration) $($params -join ' ')"
+        Write-Verbose "dotnet build $($params -join ' ')"
         dotnet build $params
 
         dotnet test $params --results-directory=$outputDirectory --logger=trx --no-build

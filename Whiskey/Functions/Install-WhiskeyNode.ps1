@@ -145,7 +145,7 @@ function Install-WhiskeyNode
             try
             {
                 $ProgressPreference = [Management.Automation.ActionPreference]::SilentlyContinue
-                Invoke-WebRequest -Uri $uri -OutFile $nodeZipFilePath
+                Invoke-WebRequest -Uri $uri -OutFile $nodeZipFilePath -UseBasicParsing
             }
             catch
             {
