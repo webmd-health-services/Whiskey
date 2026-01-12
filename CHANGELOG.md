@@ -265,6 +265,11 @@ that platform. [AppVeyor's documentation shows how to add this to your
 build.](https://www.appveyor.com/docs/running-tests/#uploading-xml-test-results) Pester outputs results in `nunit`
 format.
 
+## 0.61.3
+
+* Fixed: MSBuild task chooses tools from SQL Server Management Studio 21 if it is installed.
+* Fixed: Whiskey prompts for confirmation from users on new versions of Windows when calling `Invoke-WebRequest`. All
+  usages of `Invoke-WebRequest` now use `-UseBasicParsing` switch.
 
 ## 0.61.2
 
