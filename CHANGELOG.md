@@ -3,15 +3,26 @@
 
 # Whiskey Changelog
 
+## 0.63.2
+
+Fixed: Whiskey prompts for confirmation from users on new versions of Windows when calling `Invoke-WebRequest`. All
+usages of `Invoke-WebRequest` now use `-UseBasicParsing` switch.
+
 ## 0.63.1
+
+> Released 12 Dec 2025
 
 * Fixed: MSBuild task chooses tools from SQL Server Management Studio 21 if it is installed.
 
 ## 0.63.0
 
+> Released 8 Dec 2025
+
 * Upgraded BuildMasterAutomation dependency to version 4.3.0 (from 4.2.0)
 
 ## 0.62.0
+
+> Released 15 Oct 2025
 
 ### Upgrade Instructions
 
@@ -265,8 +276,17 @@ that platform. [AppVeyor's documentation shows how to add this to your
 build.](https://www.appveyor.com/docs/running-tests/#uploading-xml-test-results) Pester outputs results in `nunit`
 format.
 
+## 0.61.3
+
+> Released 12 Jan 2026
+
+* Fixed: MSBuild task chooses tools from SQL Server Management Studio 21 if it is installed.
+* Fixed: Whiskey prompts for confirmation from users on new versions of Windows when calling `Invoke-WebRequest`. All
+  usages of `Invoke-WebRequest` now use `-UseBasicParsing` switch.
 
 ## 0.61.2
+
+> Released 13 Aug 2025
 
 Fixed: MSBuild, NUnit2, and NUnit3 tasks fail on build servers with nuget.org as a NuGet source. Whiskey was using
 PowerShell's Package Management module to install NuGet package dependencies and the Package Management module doesn't
@@ -277,6 +297,8 @@ whose tasks use Whiskey's `Whiskey.RequiresNuGetPackage` attribute are encourage
 this change.
 
 ## 0.61.1
+
+> Released 23 Jan 2025
 
 * Fixed: the `NuGetPush` task leaks NuGet API key to the information stream.
 * Fixed: the `NuGetPush` task doesn't allow NuGet to use credentials stored in the NuGet.config file.
