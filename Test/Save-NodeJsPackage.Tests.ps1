@@ -9,7 +9,7 @@ BeforeDiscovery {
 
     try
     {
-        Invoke-WebRequest -Uri "${script:httpStatusBaseUrl}/200"
+        Invoke-WebRequest -Uri "${script:httpStatusBaseUrl}/200" -UseBasicParsing
         $script:disableHttpErrorHandlingTests = $false
     }
     catch
