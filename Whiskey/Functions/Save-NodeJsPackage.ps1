@@ -47,7 +47,7 @@ function Save-NodeJsPackage
     {
         $ProgressPreference = 'SilentlyContinue'
         $pkgChecksum =
-            Invoke-WebRequest -Uri $checksumsUrl -ErrorAction Ignore |
+            Invoke-WebRequest -Uri $checksumsUrl -UseBasicParsing -ErrorAction Ignore |
             Select-Object -ExpandProperty 'Content' |
             ForEach-Object { $_ -split '\r?\n' } |
             Where-Object { $_ -match "^([^ ]+) +$([regex]::Escape($filename))$" } |
@@ -93,7 +93,7 @@ function Save-NodeJsPackage
     {
         $ProgressPreference = 'SilentlyContinue'
         Write-WhiskeyDebug -Message "Downloading ${pkgUrl} to $($nodeZipFilePath | Split-Path -Parent | Format-Path)."
-        Invoke-WebRequest -Uri $pkgUrl -OutFile $nodeZipFilePath | Out-Null
+        Invoke-WebRequest -Uri $pkgUrl -OutFile $nodeZipFilePath -UseBasicParsing | Out-Null
     }
     catch
     {

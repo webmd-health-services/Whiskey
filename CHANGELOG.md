@@ -3,7 +3,14 @@
 
 # Whiskey Changelog
 
+## 0.63.3
+
+Fixed: `InstallNodeJs` task prompts for confirmation from users on new versions of Windows when downloading Node.js
+because it uses `Invoke-WebRequest` without `-UseBasicParsing`.
+
 ## 0.63.2
+
+> Released 14 Jan 2026
 
 Fixed: Whiskey prompts for confirmation from users on new versions of Windows when calling `Invoke-WebRequest`. All
 usages of `Invoke-WebRequest` now use `-UseBasicParsing` switch.
