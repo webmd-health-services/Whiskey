@@ -3,6 +3,11 @@
 
 # Whiskey Changelog
 
+## 0.63.4
+
+Fixed: `MSBuild` task used a vulnerable version of [NuGet.CommandLine](https://www.nuget.org/packages/nuget.commandline)
+(`6.3.1`). Upgraded all usages of [Nuget.CommandLine](https://www.nuget.org/packages/nuget.commandline) to `6.14.*`.
+
 ## 0.63.3
 
 Fixed: `InstallNodeJs` task prompts for confirmation from users on new versions of Windows when downloading Node.js
