@@ -3,6 +3,11 @@
 
 # Whiskey Changelog
 
+## 0.61.4
+
+Fixed: `MSBuild` task used a vulnerable version of [NuGet.CommandLine](https://www.nuget.org/packages/nuget.commandline)
+(`6.3.1`). Upgraded all usages of [Nuget.CommandLine](https://www.nuget.org/packages/nuget.commandline) to `6.14.*`.
+
 ## 0.61.3
 
 * Fixed: MSBuild task chooses tools from SQL Server Management Studio 21 if it is installed.
