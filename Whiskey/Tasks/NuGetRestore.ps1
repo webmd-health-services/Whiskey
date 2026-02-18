@@ -4,7 +4,7 @@ function Restore-WhiskeyNuGetPackage
     [CmdletBinding()]
     [Whiskey.Task('NuGetRestore', Platform='Windows', Obsolete,
         ObsoleteMessage='The "NuGetRestore" task is obsolete. It will be removed in a future version of Whiskey. Please use "nuget" commands instead.')]
-    [Whiskey.RequiresNuGetPackage('NuGet.CommandLine', Version='6.10.*', PathParameterName='NuGetPath')]
+    [Whiskey.RequiresNuGetPackage('NuGet.CommandLine', Version='6.14.*', PathParameterName='NuGetPath')]
     param(
         [Parameter(Mandatory)]
         [Whiskey.Tasks.ValidatePath(Mandatory)]
