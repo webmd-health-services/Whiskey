@@ -3,7 +3,7 @@ function Invoke-WhiskeyMSBuild
 {
     [Whiskey.Task('MSBuild', SupportsClean, Platform='Windows')]
     [Whiskey.RequiresPowerShellModule('VSSetup', Version='2.*', VersionParameterName='VSSetupVersion')]
-    [Whiskey.RequiresNuGetPackage('NuGet.CommandLine', Version='6.3.1', VersionParameterName='NuGetVersion',
+    [Whiskey.RequiresNuGetPackage('NuGet.CommandLine', Version='6.14.*', VersionParameterName='NuGetVersion',
         PathParameterName='NuGetPath')]
     [CmdletBinding()]
     param(
