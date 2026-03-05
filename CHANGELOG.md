@@ -3,6 +3,11 @@
 
 # Whiskey Changelog
 
+## 0.64.0
+
+* Updating BuildMasterAutomation dependency from 4.3.0 to 5.0.0, which adds support for BuildMaster 2024/2025.
+* Updating ProGetAutomation dependency from 3.1.0 to 3.2.0, which adds WhatIf functionality to some functions.
+
 ## 0.63.4
 
 Fixed: `MSBuild` task used a vulnerable version of [NuGet.CommandLine](https://www.nuget.org/packages/nuget.commandline)

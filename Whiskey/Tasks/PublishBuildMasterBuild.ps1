@@ -4,7 +4,7 @@ function Publish-WhiskeyBuildMasterBuild
     [CmdletBinding()]
     [Whiskey.Task('PublishBuildMasterBuild', Aliases='PublishBuildMasterPackage')]
     [Whiskey.RequiresPowerShellModule('BuildMasterAutomation',
-        Version='4.2.*',
+        Version='5.*',
         VersionParameterName='BuildMasterAutomationVersion')]
     param(
         [Parameter(Mandatory)]
