@@ -2,7 +2,7 @@
     "PSModules": [
         {
             "Name": "BuildMasterAutomation",
-            "Version": "4.*"
+            "Version": "5.*"
         },
         {
             "Name": "ProGetAutomation",
