@@ -429,10 +429,6 @@ If you want certain branches to always have certain prerelease versions, set Pre
 
                 $buildInfo = $TaskContext.BuildMetadata
                 $branch = $buildInfo.ScmBranch
-                if( $buildInfo.IsPullRequest )
-                {
-                    $branch = $buildInfo.ScmSourceBranch
-                }
 
                 foreach( $wildcardPattern in $map.Keys )
                 {

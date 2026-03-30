@@ -19,7 +19,6 @@ BeforeAll {
     $script:projectKey = $null
     $script:commitID = $null
     $script:gitUrl = $null
-    $script:isPullRequest = $false
 
     function GivenACommit
     {
@@ -44,11 +43,6 @@ BeforeAll {
         )
 
         $script:url = $Url
-    }
-
-    function GivenBuildingPullRequest
-    {
-        $script:isPullRequest = $true
     }
 
     function GivenCredential
@@ -126,11 +120,6 @@ BeforeAll {
                                                  -IncludePSModule 'BitbucketServerAutomation'
 
         $script:context.BuildMetadata.ScmUri = $script:gitUrl
-
-        if( $script:isPullRequest )
-        {
-            $script:context.BuildMetadata.IsPullRequest = $true
-        }
 
         Mock -CommandName 'New-BBServerTag' -ModuleName 'Whiskey'
 
@@ -248,7 +237,6 @@ Describe 'PublishBitbucketServerTag' {
 
         $script:gitUrl = ''
         $script:testRoot = New-WhiskeyTestRoot
-        $script:isPullRequest = $false
     }
 
     AfterEach {
@@ -316,17 +304,5 @@ Describe 'PublishBitbucketServerTag' {
         GivenACommit 'deadbeedeadbee'
         WhenTaggingACommit #-ErrorAction SilentlyContinue
         ThenTaskFails '\bunable\ to\ determine\ the\ repository'
-    }
-
-    It 'should do nothing if building a pull request' {
-        GivenCredential 'bbservercredential' 'username' 'password'
-        GivenBBServerAt 'https://bbserver.example.com'
-        GivenGitUrl 'ssh://git@bbserver.example.com/project/repo.git'
-        GivenACommit
-        GivenVersion '1.4.5'
-        GivenBuildingPullRequest
-        WhenTaggingACommit
-        Assert-MockCalled -CommandName 'New-BBServerTag' -ModuleName 'Whiskey' -Times 0
-        $Global:Error | Should -BeNullOrEmpty
     }
 }

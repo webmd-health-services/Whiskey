@@ -10,6 +10,20 @@ BeforeAll {
     $script:buildInfo = $null
     $script:envVars = @{}
 
+    function GivenEnv
+    {
+        [CmdletBinding()]
+        param(
+            [Parameter(Mandatory)]
+            [hashtable] $Variables
+        )
+
+        foreach ($envVarName in $Variables.Keys)
+        {
+            GivenEnvironmentVariable -Name $envVarName -Value $Variables[$envVarName]
+        }
+    }
+
     function GivenEnvironmentVariable
     {
         param(
@@ -29,120 +43,6 @@ BeforeAll {
         Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter { $Path-eq 'env:TEAMCITY_BUILD_PROPERTIES_FILE' } -MockWith { return $false }
         GivenNotRunningUnderAppVeyor
 
-    }
-
-    function GivenAppVeyorEnvironment
-    {
-        [CmdletBinding(DefaultParameterSetName='NotAPR')]
-        param(
-            [Parameter(Mandatory)]
-            [int] $BuildNumber,
-
-            [Parameter(Mandatory)]
-            $BuildID,
-
-            [Parameter(Mandatory)]
-            $ProjectName,
-
-            [Parameter(Mandatory)]
-            $ProjectSlug,
-
-            [Parameter(Mandatory)]
-            $ScmProvider,
-
-            [Parameter(Mandatory)]
-            $ScmRepoName,
-            [Parameter(Mandatory)]
-            $ScmBranch,
-
-            [Parameter(Mandatory)]
-            $ScmCommit,
-
-            [Parameter(Mandatory)]
-            $AccountName,
-
-            [Parameter(Mandatory)]
-            $BuildVersion,
-
-            [Parameter(Mandatory, ParameterSetName='ForPR')]
-            [String] $ScmSourceBranch,
-
-            [Parameter(Mandatory, ParameterSetName='ForPR')]
-            [String] $ScmSourceCommitID
-        )
-
-        GivenEnvironmentVariable 'APPVEYOR' 'True'
-        GivenEnvironmentVariable 'APPVEYOR_BUILD_NUMBER' $BuildNumber
-        GivenEnvironmentVariable 'APPVEYOR_BUILD_ID' $BuildID
-        GivenEnvironmentVariable 'APPVEYOR_PROJECT_NAME' $ProjectName
-        GivenEnvironmentVariable 'APPVEYOR_PROJECT_SLUG' $ProjectSlug
-        GivenEnvironmentVariable 'APPVEYOR_REPO_PROVIDER' $ScmProvider
-        GivenEnvironmentVariable 'APPVEYOR_REPO_NAME' $ScmRepoName
-        GivenEnvironmentVariable 'APPVEYOR_REPO_BRANCH' $ScmBranch
-        GivenEnvironmentVariable 'APPVEYOR_REPO_COMMIT' $ScmCommit
-        GivenEnvironmentVariable 'APPVEYOR_ACCOUNT_NAME' $AccountName
-        GivenEnvironmentVariable 'APPVEYOR_BUILD_VERSION' $BuildVersion
-
-        if( $PSCmdlet.ParameterSetName -eq 'ForPR' )
-        {
-            GivenEnvironmentVariable 'APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH' $ScmSourceBranch
-            GivenEnvironmentVariable 'APPVEYOR_PULL_REQUEST_HEAD_COMMIT' $ScmSourceCommitID
-        }
-    }
-
-    function GivenJenkinsEnvironment
-    {
-        [CmdletBinding()]
-        param(
-            [Parameter(Mandatory)]
-            [int] $BuildNumber,
-
-            [Parameter(Mandatory)]
-            $BuildID,
-
-            [Parameter(Mandatory)]
-            $JobName,
-
-            [Parameter(Mandatory)]
-            $JobUri,
-
-            [Parameter(Mandatory)]
-            $BuildUri,
-
-            [Parameter(Mandatory, ParameterSetName='WithGitScmForPR')]
-            [Parameter(Mandatory, ParameterSetName='WithGitScm')]
-            $GitUri,
-
-            [Parameter(Mandatory, ParameterSetName='WithGitScmForPR')]
-            [Parameter(Mandatory, ParameterSetName='WithGitScm')]
-            $GitCommit,
-
-            [Parameter(Mandatory, ParameterSetName='WithGitScmForPR')]
-            [Parameter(Mandatory, ParameterSetName='WithGitScm')]
-            $GitBranch,
-
-            [Parameter(Mandatory, ParameterSetName='WithGitScmForPR')]
-            $GitSourceBranch
-        )
-
-        GivenNotRunningUnderAppVeyor
-        GivenEnvironmentVariable 'JENKINS_URL' 'https://jenkins.example.com'
-        GivenEnvironmentVariable 'BUILD_NUMBER' $BuildNumber
-        GivenEnvironmentVariable 'BUILD_TAG' $BuildID
-        GivenEnvironmentVariable 'JOB_NAME' $JobName
-        GivenEnvironmentVariable 'JOB_URL' $JobUri
-        GivenEnvironmentVariable 'BUILD_URL' $BuildUri
-        if( $PSCmdlet.ParameterSetName -like 'WithGitScm*' )
-        {
-            GivenEnvironmentVariable 'GIT_URL' $GitUri
-            GivenEnvironmentVariable 'GIT_COMMIT' $GitCommit
-            GivenEnvironmentVariable 'GIT_BRANCH' $GitBranch
-
-            if( $PSCmdlet.ParameterSetName -eq 'WithGitScmForPR' )
-            {
-                GivenEnvironmentVariable 'CHANGE_BRANCH' $GitSourceBranch
-            }
-        }
     }
 
     function GivenNotRunningUnderAppVeyor
@@ -234,13 +134,7 @@ BeforeAll {
             $ScmCommit,
 
             [Parameter(Mandatory, ParameterSetName='WithGitScm')]
-            $ScmBranch,
-
-            [switch] $IsPullRequest,
-
-            [String] $ScmSourceBranch,
-
-            [String] $ScmSourceCommitID
+            $ScmBranch
         )
 
         $buildInfo = $script:buildInfo
@@ -254,9 +148,6 @@ BeforeAll {
         $buildInfo.ScmUri | Should -Be $ScmUri
         $buildInfo.ScmCommitID | Should -Be $ScmCommit
         $buildInfo.ScmBranch | Should -Be $ScmBranch
-        $buildInfo.IsPullRequest | Should -Be $IsPullRequest.IsPresent
-        $buildInfo.ScmSourceBranch | Should -Be $ScmSourceBranch
-        $buildInfo.ScmSourceCommitID | Should -Be $ScmSourceCommitID
     }
 
     function ThenBuildServerIs
@@ -284,31 +175,29 @@ BeforeAll {
 
     function WhenGettingBuildMetadata
     {
-        # Make sure Get-Item fails when an environment variable fails so we make sure we handle it.
+        $envVars = $script:envVars
         Mock -CommandName 'Get-Item' `
              -ModuleName 'Whiskey' `
              -ParameterFilter { $Path -like 'env:*' } `
              -MockWith {
-                Write-Error -Message "Cannot find path '$($Path)' because it does not exist." `
-                            -ErrorAction $PesterBoundParameters['ErrorAction']
+                $envVarName = $Path.Substring(4)
+                if (-not $envVars.ContainsKey($envVarName))
+                {
+                    Write-Error -Message "Cannot find path ""${Path}"" because it does not exist." `
+                                -ErrorAction $PesterBoundParameters['ErrorAction']
+                    return
+                }
+
+                return [pscustomobject]@{ Value = $envVars[$envVarName] }
              }
 
         Mock -CommandName 'Test-Path' `
              -ModuleName 'Whiskey' `
              -ParameterFilter { $Path -like 'env:*' } `
-             -MockWith { return $false }
-
-        foreach( $envVarName in $script:envVars.Keys )
-        {
-            $value = $script:envVars[$envVarName]
-            $filter = [scriptblock]::Create(("`$Path -eq 'env:${envVarName}'"))
-            Mock -CommandName 'Test-Path' -ModuleName 'Whiskey' -ParameterFilter $filter -MockWith { return $true }
-            Mock -CommandName 'Get-Item' `
-                 -ModuleName 'Whiskey' `
-                 -ParameterFilter $filter `
-                 -MockWith { return [pscustomobject]@{ Value = $value }}.GetNewClosure()
-        }
-
+             -MockWith {
+                $envVarName = $Path.Substring(4)
+                return $envVars.ContainsKey($envVarName)
+            }
 
         $script:buildInfo = Invoke-WhiskeyPrivateCommand -Name 'Get-WhiskeyBuildMetadata'
     }
@@ -323,15 +212,21 @@ Describe 'Get-WhiskeyBuildMetadata' {
     }
 
     Context 'running under Jenkins' {
+        BeforeEach {
+            GivenEnvironmentVariable 'JENKINS_URL' 'https://jenkins.example.com'
+        }
+
         It 'sets build metadata' {
-            GivenJenkinsEnvironment -BuildNumber '27' `
-                                    -BuildID 'jenkins_Fubar_27' `
-                                    -JobName 'Fubar' `
-                                    -BuildUri 'https://build.example.com' `
-                                    -GitUri 'https://git.example.com' `
-                                    -GitCommit 'commitid' `
-                                    -GitBranch 'origin/master' `
-                                    -JobUri 'https://job.example.com'
+            GivenEnv @{
+                'BUILD_NUMBER' = '27'
+                'BUILD_TAG' = 'jenkins_Fubar_27'
+                'JOB_NAME' = 'Fubar'
+                'JOB_URL' = 'https://job.example.com'
+                'BUILD_URL' = 'https://build.example.com'
+                'GIT_URL' = 'https://git.example.com'
+                'GIT_COMMIT' = 'commitid'
+                'GIT_BRANCH' = 'origin/master'
+            }
             WhenGettingBuildMetadata
             ThenBuildMetadataIs -BuildNumber '27' `
                                 -BuildID 'jenkins_Fubar_27' `
@@ -345,15 +240,17 @@ Describe 'Get-WhiskeyBuildMetadata' {
         }
 
         It 'sets pull request build metadata' {
-            GivenJenkinsEnvironment -BuildNumber '28' `
-                                    -BuildID 'jenkins_Fubar_28' `
-                                    -JobName 'Fubar' `
-                                    -BuildUri 'https://build.example.com' `
-                                    -GitUri 'https://git.example.com' `
-                                    -GitCommit 'new_commit_id' `
-                                    -GitBranch 'origin/master' `
-                                    -JobUri 'https://job.example.com' `
-                                    -GitSourceBranch 'origin/feature/pr'
+            GivenEnv @{
+                'BUILD_NUMBER' = '28'
+                'BUILD_TAG' = 'jenkins_Fubar_28'
+                'JOB_NAME' = 'Fubar'
+                'JOB_URL' = 'https://job.example.com'
+                'BUILD_URL' = 'https://build.example.com'
+                'GIT_URL' = 'https://git.example.com'
+                'GIT_COMMIT' = 'new_commit_id'
+                'GIT_BRANCH' = 'PR-47'
+                'CHANGE_BRANCH' = 'origin/feature/pr'
+            }
             WhenGettingBuildMetadata
             ThenBuildMetadataIs -BuildNumber '28' `
                                 -BuildID 'jenkins_Fubar_28' `
@@ -361,11 +258,8 @@ Describe 'Get-WhiskeyBuildMetadata' {
                                 -BuildUri 'https://build.example.com' `
                                 -ScmUri 'https://git.example.com' `
                                 -ScmCommit 'new_commit_id' `
-                                -ScmBranch 'master' `
-                                -JobUri 'https://job.example.com' `
-                                -IsPullRequest `
-                                -ScmSourceBranch 'feature/pr' `
-                                -ScmSourceCommit 'new_commit_id'
+                                -ScmBranch 'feature/pr' `
+                                -JobUri 'https://job.example.com'
         }
     }
 
@@ -373,23 +267,36 @@ Describe 'Get-WhiskeyBuildMetadata' {
         It 'does not set most build metadata' {
             GivenDeveloperEnvironment
             WhenGettingBuildMetadata
-            ThenBuildMetadataIs -BuildNumber 0 -BuildID '' -JobName '' -BuildUri $null -ScmUri $null -ScmCommit '' -ScmBranch '' -JobUri $null
+            ThenBuildMetadataIs -BuildNumber 0 `
+                                -BuildID '' `
+                                -JobName '' `
+                                -BuildUri $null `
+                                -ScmUri $null `
+                                -ScmCommit '' `
+                                -ScmBranch '' `
+                                -JobUri $null
             ThenRunByDeveloper
         }
     }
 
     Context 'AppVeyor' {
+        BeforeEach {
+            GivenEnvironmentVariable 'APPVEYOR' 'True'
+        }
+
         It 'sets build metadata' {
-            GivenAppVeyorEnvironment -BuildNumber '112' `
-                                    -BuildID '10187821' `
-                                    -ProjectName 'WhiskeyName' `
-                                    -ProjectSlug 'whiskeyslug' `
-                                    -ScmProvider 'gitHub' `
-                                    -ScmRepoName 'webmd-health-services/Whiskey' `
-                                    -ScmBranch 'master' `
-                                    -ScmCommit 'commit_id' `
-                                    -AccountName 'whs' `
-                                    -BuildVersion '1.1.1+112'
+            GivenEnv @{
+                'APPVEYOR_BUILD_NUMBER' = '112'
+                'APPVEYOR_BUILD_ID' = '10187821'
+                'APPVEYOR_PROJECT_NAME' = 'WhiskeyName'
+                'APPVEYOR_PROJECT_SLUG' = 'whiskeyslug'
+                'APPVEYOR_REPO_PROVIDER' = 'gitHub'
+                'APPVEYOR_REPO_NAME' = 'webmd-health-services/Whiskey'
+                'APPVEYOR_REPO_BRANCH' = 'master'
+                'APPVEYOR_REPO_COMMIT' = 'commit_id'
+                'APPVEYOR_ACCOUNT_NAME' = 'whs'
+                'APPVEYOR_BUILD_VERSION' = '1.1.1+112'
+            }
             WhenGettingBuildMetadata
             ThenBuildMetadataIs -BuildNumber '112' `
                                 -BuildID '10187821' `
@@ -403,30 +310,29 @@ Describe 'Get-WhiskeyBuildMetadata' {
         }
 
         It 'sets pull request build metadata' {
-            GivenAppVeyorEnvironment -BuildNumber '113' `
-                                    -BuildID '10187822' `
-                                    -ProjectName 'WhiskeyName' `
-                                    -ProjectSlug 'whiskeyslug' `
-                                    -ScmProvider 'gitHub' `
-                                    -ScmRepoName 'webmd-health-services/Whiskey' `
-                                    -ScmBranch 'master' `
-                                    -ScmCommit 'new_commit_id' `
-                                    -AccountName 'whs' `
-                                    -BuildVersion '1.1.1+112' `
-                                    -ScmSourceBranch 'feature/pr' `
-                                    -ScmSourceCommitID 'source_branch_commit_id'
+            GivenEnv @{
+                'APPVEYOR_BUILD_NUMBER' = '113'
+                'APPVEYOR_BUILD_ID' = '10187822'
+                'APPVEYOR_PROJECT_NAME' = 'WhiskeyName'
+                'APPVEYOR_PROJECT_SLUG' = 'whiskeyslug'
+                'APPVEYOR_REPO_PROVIDER' = 'gitHub'
+                'APPVEYOR_REPO_NAME' = 'webmd-health-services/Whiskey'
+                'APPVEYOR_REPO_BRANCH' = 'master'
+                'APPVEYOR_REPO_COMMIT' = 'new_commit_id'
+                'APPVEYOR_ACCOUNT_NAME' = 'whs'
+                'APPVEYOR_BUILD_VERSION' = '1.1.1+112'
+                'APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH' = 'feature/branch'
+                'APPVEYOR_PULL_REQUEST_HEAD_COMMIT' = 'branch_commit_id'
+            }
             WhenGettingBuildMetadata
             ThenBuildMetadataIs -BuildNumber '113' `
                                 -BuildID '10187822' `
                                 -JobName 'WhiskeyName' `
                                 -BuildUri 'https://ci.appveyor.com/project/whs/whiskeyslug/build/1.1.1+112' `
                                 -ScmUri 'https://github.com/webmd-health-services/Whiskey.git' `
-                                -ScmCommit 'new_commit_id' `
-                                -ScmBranch 'master' `
-                                -JobUri 'https://ci.appveyor.com/project/whs/whiskeyslug' `
-                                -ScmSourceBranch 'feature/pr' `
-                                -ScmSourceCommitID 'source_branch_commit_id' `
-                                -IsPullRequest
+                                -ScmCommit 'branch_commit_id' `
+                                -ScmBranch 'feature/branch' `
+                                -JobUri 'https://ci.appveyor.com/project/whs/whiskeyslug'
             ThenBuildServerIs ([Whiskey.BuildServer]::AppVeyor)
         }
     }

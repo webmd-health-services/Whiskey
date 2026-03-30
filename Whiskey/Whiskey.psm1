@@ -163,9 +163,6 @@ New-WhiskeyObject -TypeName 'Whiskey.RequiresPowerShellModuleAttribute' -Argumen
 $attr = New-WhiskeyObject -TypeName 'Whiskey.Tasks.ValidatePathAttribute'
 Assert-Member -Object $attr -Property @( 'Create' )
 
-$buildInfo = New-WhiskeyObject -TypeName 'Whiskey.BuildInfo'
-Assert-Member -Object $buildInfo -Property @( 'ScmSourceBranch' )
-
 New-WhiskeyObject -TypeName 'Whiskey.RequiresNuGetPackageAttribute' -ArgumentList 'NuGet.CommandLine' | Out-Null
 
 [Type]$apiKeysType = $context.ApiKeys.GetType()

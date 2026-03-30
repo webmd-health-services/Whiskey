@@ -58,15 +58,6 @@ BeforeAll {
         $script:branch = $Named
     }
 
-    function GivenSourceBranch
-    {
-        param(
-            [String] $Named
-        )
-
-        $script:sourceBranch = $Named
-    }
-
     function GivenUniversalPackageVersions
     {
         param(
@@ -203,12 +194,6 @@ BeforeAll {
             $script:context.BuildMetadata.ScmBranch = $script:branch
         }
 
-        if( $sourceBranch )
-        {
-            $script:context.BuildMetadata.ScmSourceBranch = $sourceBranch
-            $script:context.BuildMetadata.IsPullRequest = $true
-        }
-
         if ($ForPSModule)
         {
             $script:versions = $WithVersions
@@ -257,7 +242,6 @@ Describe 'Version' {
         $script:version = $null
         $script:failed = $false
         $script:branch = $null
-        $script:sourceBranch = $null
         $script:versions = @()
         $script:apikeys.Clear()
         $script:credentials.Clear()
@@ -721,17 +705,6 @@ description 'Installs/Configures cookbook_name'
         ThenVersionIs '1.0.0'
         ThenSemVer1Is '1.0.0'
         ThenSemVer2Is '1.0.0'
-    }
-
-    It 'should use source branch name for prerelease branch matching when building a pull request' {
-        GivenCurrentVersion '1.0.0'
-        GivenBranch 'one'
-        GivenSourceBranch 'two'
-        WhenRunningTask -WithProperties @{ 'Prerelease' = @( @{ 'one' = 'one' }, @{ 'two' = 'two' } ) }
-        ThenVersionIs '1.0.0'
-        ThenSemVer1Is '1.0.0-two'
-        ThenSemVer2Is '1.0.0-two'
-
     }
 
     It 'should use universal package next version number for same version' {

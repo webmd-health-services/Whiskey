@@ -78,9 +78,7 @@ BeforeAll {
             [Parameter(Position=0)]
             [Collections.IDictionary]$Configuration,
 
-            $BuildNumber = '1',
-
-            [String] $IsPRFromBranch
+            $BuildNumber = '1'
         )
 
         if( -not $Configuration )
@@ -104,15 +102,7 @@ BeforeAll {
             $buildInfo.ScmBranch = $OnBranch
             $buildInfo.ScmCommitID = 'deadbeedeadbee'
             $buildInfo.BuildServer = [Whiskey.BuildServer]::Jenkins
-
-            if( $IsPRFromBranch )
-            {
-                $buildInfo.IsPullRequest = $true
-                $buildInfo.ScmSourceBranch = $IsPRFromBranch
-            }
         }
-
-
 
         $yaml = $Configuration | ConvertTo-Yaml
         GivenWhiskeyYml $yaml
@@ -514,14 +504,6 @@ Describe 'New-WhiskeyContext' {
     Context 'publishing on multiple branches and not building on one of them' {
         It 'creates context' {
             GivenConfiguration -OnBranch 'some-issue-master' -ForBuildServer -PublishingOn @( 'feature/3.0', 'master' )
-            WhenCreatingContext
-            ThenDoesNotPublish
-        }
-    }
-
-    Context 'building a PR that targets a publishing branch' {
-        It 'should not publish' {
-            GivenConfiguration -ForBuildServer -OnBranch 'main' -IsPRFromBranch 'feature/pr' -PublishingOn @('main')
             WhenCreatingContext
             ThenDoesNotPublish
         }

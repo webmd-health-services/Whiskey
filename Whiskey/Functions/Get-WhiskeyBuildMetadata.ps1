@@ -2,15 +2,17 @@
 function Get-WhiskeyBuildMetadata
 {
     <#
-    SYNOPSIS
-    Gets metadata about the current build.
+    SYNOPSIS Gets metadata about the current build.
 
     .DESCRIPTION
-    The `Get-WhiskeyBuildMetadata` function gets information about the current build. It is exists to hide what CI server the current build is running under. It returns an object with the following properties:
+    The `Get-WhiskeyBuildMetadata` function gets information about the current build. It is exists to hide what CI
+    server the current build is running under. It returns an object with the following properties:
 
     * `ScmUri`: the URI to the source control repository used in this build.
-    * `BuildNumber`: the build number of the current build. This is the incrementing number most CI servers used to identify a build of a specific job.
-    * `BuildID`: this unique identifier for this build. Usually, this is used by CI servers to distinguish this build from builds across all jobs.
+    * `BuildNumber`: the build number of the current build. This is the incrementing number most CI servers used to
+      identify a build of a specific job.
+    * `BuildID`: this unique identifier for this build. Usually, this is used by CI servers to distinguish this build
+      from builds across all jobs.
     * `ScmCommitID`: the full ID of the commit that is being built.
     * `ScmBranch`: the branch name of the commit that is being built.
     * `JobName`: the name of the job that is running the build.
@@ -27,10 +29,19 @@ function Get-WhiskeyBuildMetadata
     function Get-EnvironmentVariable
     {
         param(
-            $Name
+            [String[]] $Name
         )
 
-        Get-Item -Path ('env:{0}' -f $Name) -ErrorAction Ignore | Select-Object -ExpandProperty 'Value'
+        foreach ($_name in $Name)
+        {
+            if (-not (Test-Path -Path ('env:{0}' -f $_name)))
+            {
+                continue
+            }
+
+            Get-Item -Path ('env:{0}' -f $_name) -ErrorAction Ignore | Select-Object -ExpandProperty 'Value'
+            break
+        }
     }
 
     $buildInfo = New-WhiskeyBuildMetadataObject
@@ -44,17 +55,11 @@ function Get-WhiskeyBuildMetadata
         $buildInfo.JobUri = Get-EnvironmentVariable 'JOB_URL'
         $buildInfo.ScmUri = Get-EnvironmentVariable 'GIT_URL'
         $buildInfo.ScmCommitID = Get-EnvironmentVariable 'GIT_COMMIT'
-        $buildInfo.ScmBranch = Get-EnvironmentVariable 'GIT_BRANCH'
-        $buildInfo.ScmBranch = $buildInfo.ScmBranch -replace '^origin/',''
+        # For PR builds, GIT_BRANCH gets set to `PR-ID` where ID is a the PR number and CHANGE_BRANCH is the source
+        # branch, so always use CHANGE_BRANCH if it exists.
+        $scmBranch = Get-EnvironmentVariable 'CHANGE_BRANCH','GIT_BRANCH'
+        $buildInfo.ScmBranch = $scmBranch -replace '^origin/',''
         $buildInfo.BuildServer = [Whiskey.BuildServer]::Jenkins
-
-        if( (Test-Path -Path 'env:CHANGE_BRANCH') )
-        {
-            $buildInfo.IsPullRequest = $true
-            $buildInfo.ScmSourceBranch = Get-EnvironmentVariable 'CHANGE_BRANCH'
-            $buildInfo.ScmSourceBranch = $buildInfo.ScmSourceBranch -replace '^origin/',''
-            $buildInfo.ScmSourceCommitID = Get-EnvironmentVariable 'GIT_COMMIT'
-        }
     }
     elseif( (Test-Path -Path 'env:APPVEYOR') )
     {
@@ -86,14 +91,12 @@ function Get-WhiskeyBuildMetadata
         }
         $repoName = Get-EnvironmentVariable 'APPVEYOR_REPO_NAME'
         $buildInfo.ScmUri = '{0}/{1}.git' -f $baseUri,$repoName
-        $buildInfo.ScmCommitID = Get-EnvironmentVariable 'APPVEYOR_REPO_COMMIT'
-        $buildInfo.ScmBranch = Get-EnvironmentVariable 'APPVEYOR_REPO_BRANCH'
-        if( (Test-Path -Path 'env:APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH') )
-        {
-            $buildInfo.IsPullRequest = $true
-            $buildInfo.ScmSourceBranch = Get-EnvironmentVariable 'APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH'
-            $buildInfo.ScmSourceCommitID = Get-EnvironmentVariable 'APPVEYOR_PULL_REQUEST_HEAD_COMMIT'
-        }
+
+        # For PR builds, AppVeyor uses the target branch for the branch name and creates a new commit ID. We want to use
+        # the source branch and original commit ID instead.
+        $buildInfo.ScmBranch = Get-EnvironmentVariable 'APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH','APPVEYOR_REPO_BRANCH'
+        $buildInfo.ScmCommitID = Get-EnvironmentVariable 'APPVEYOR_PULL_REQUEST_HEAD_COMMIT','APPVEYOR_REPO_COMMIT'
+
         $buildInfo.BuildServer = [Whiskey.BuildServer]::AppVeyor
     }
     elseif( (Test-Path -Path 'env:TEAMCITY_BUILD_PROPERTIES_FILE') )
@@ -119,7 +122,7 @@ function Get-WhiskeyBuildMetadata
         $buildProperties = Import-TeamCityProperty -Path $buildPropertiesPath
         $buildInfo.BuildID = $buildProperties['teamcity.build.id']
         $buildInfo.JobName = $buildProperties['teamcity.buildType.id']
-        
+
         $configProperties = Import-TeamCityProperty -Path $buildProperties['teamcity.configuration.properties.file']
         $buildInfo.ScmBranch = $configProperties['teamcity.build.branch'] -replace '^refs/heads/',''
         $buildInfo.ScmUri = $configProperties['vcsroot.url']
