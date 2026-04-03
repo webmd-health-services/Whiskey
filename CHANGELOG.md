@@ -3,17 +3,61 @@
 
 # Whiskey Changelog
 
+## 0.65.0
+
+### Upgrade Instructions
+
+Whiskey now treats pull request builds as if they are running on the source branch of the pull request. Previously, it
+used the target branch name or, if the build server created a special branch on which to merge, that merge branch's
+name. Whiskey now uses the pull request's source branch name as the build's branch name and the source branch's HEAD
+commit ID as the build's commit ID. This means Whiskey, on pull request builds:
+
+* could publish (i.e. run `Publish` pipelines in whiskey.yml file) if an item in the the `PublishOn` setting matches a
+  pull request build's source branch name.
+* could run tasks that previously didn't run if an item in a task's `.OnlyOnBranch` or `.ExceptOnBranch` lists matches
+  the pull request build's source branch name.
+* sets the value of the `WHISKEY_SCM_BRANCH` variable to the pull request source branch name.
+* sets the value of the `WHISKEY_SCM_COMMIT_ID` variable to the pull request source branch's HEAD commit ID.
+
+Review whiskey.yml file for any impacts from these changes.
+
+Remove usages of the Whiskey context object's `IsPullRequest`, `ScmSourceBranch`, and `ScmSourceCommitId` properties.
+
+Inspect usages of the `PublishBitbucketServerTag` task. It now publishes on pull request builds. Add `.OnlyOnBranch` or
+`.ExceptOnBranch` properties to prevent it from running.
+
+### Changed
+
+Whiskey now treats pull request builds as if they are running on the source branch. For pull request builds:
+
+* the source branch name is now used for the build's branch name. This impacts branch lists in the `PublishOn` setting,
+  `.OnlyOnBranch` task property, `.ExceptOnBrnach` task property, and the `WHISKEY_SCM_BRANCH` variable. Inspect usages.
+* the source branch's HEAD commit ID is now used for the build's commit ID. This impacts the `WHISKEY_SCM_COMMIT_ID`
+  variable. Inspect usages.
+
+The `PublishBitbucketServerTag` task now runs on pull request builds.
+
+### Removed
+
+The Whiskey context object's `IsPullRequest`, `ScmSourceBranch`, and `ScmSourceCommitId` properties. Remove usages.
+
 ## 0.64.0
+
+> Released 6 Mar 2026
 
 * Updating BuildMasterAutomation dependency from 4.3.0 to 5.0.0, which adds support for BuildMaster 2024/2025.
 * Updating ProGetAutomation dependency from 3.1.0 to 3.2.0, which adds WhatIf functionality to some functions.
 
 ## 0.63.4
 
+> Released 19 Feb 2026
+
 Fixed: `MSBuild` task used a vulnerable version of [NuGet.CommandLine](https://www.nuget.org/packages/nuget.commandline)
 (`6.3.1`). Upgraded all usages of [Nuget.CommandLine](https://www.nuget.org/packages/nuget.commandline) to `6.14.*`.
 
 ## 0.63.3
+
+> Released 20 Feb 2026
 
 Fixed: `InstallNodeJs` task prompts for confirmation from users on new versions of Windows when downloading Node.js
 because it uses `Invoke-WebRequest` without `-UseBasicParsing`.

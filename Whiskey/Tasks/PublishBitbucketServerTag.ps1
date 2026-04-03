@@ -28,13 +28,6 @@ function Publish-WhiskeyBBServerTag
             CredentialID: BitbucketServerCredential
             Url: https://bitbucketserver.example.com'
 
-    if( $TaskContext.BuildMetadata.IsPullRequest )
-    {
-        'Skipping PublishBitbucketServerTag task: can''t tag a pull request commit because it doesn''t exist in the ' +
-        'origin repostory, only on the build server.' | Write-WhiskeyVerbose
-        return
-    }
-
     if (-not $CredentialID)
     {
         $msg = 'Property "CredentialID" is mandatory. It should be the ID of the credential to use when connecting ' +

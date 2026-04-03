@@ -111,10 +111,10 @@ function New-WhiskeyContext
     {
         $branch = $buildMetadata.ScmBranch
 
-        if( -not $buildMetadata.IsPullRequest -and $config.ContainsKey('PublishOn') )
+        if ($config.ContainsKey('PublishOn'))
         {
             Write-WhiskeyVerbose -Message ('PublishOn')
-            foreach( $publishWildcard in $config['PublishOn'] )
+            foreach ($publishWildcard in $config['PublishOn'])
             {
                 $publish = $branch -like $publishWildcard
                 if( $publish )
