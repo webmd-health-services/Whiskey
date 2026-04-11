@@ -39,8 +39,13 @@ function Get-WhiskeyBuildMetadata
                 continue
             }
 
-            Get-Item -Path ('env:{0}' -f $_name) -ErrorAction Ignore | Select-Object -ExpandProperty 'Value'
-            break
+            $value = Get-Item -Path ('env:{0}' -f $_name) -ErrorAction Ignore | Select-Object -ExpandProperty 'Value'
+            if (-not $value)
+            {
+                continue
+            }
+
+            return $value
         }
     }
 

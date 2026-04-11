@@ -3,7 +3,14 @@
 
 # Whiskey Changelog
 
+## 0.65.1
+
+Fixed: Build metadata doesn't get properly set on AppVeyor Linux builds because on that platform, PR-specific
+environment variables exist but don't have values, a situation Whiskey wasn't handling.
+
 ## 0.65.0
+
+> Released 3 Apr 2026
 
 ### Upgrade Instructions
 
