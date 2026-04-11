@@ -33,7 +33,6 @@ Build:
     PowerShellModuleName: Whiskey
     Prerelease:
     - main: ""
-    - master: ""
     - "release/*": ""
     - "*": rc1
     IncrementPrereleaseVersion: true
