@@ -335,6 +335,33 @@ Describe 'Get-WhiskeyBuildMetadata' {
                                 -JobUri 'https://ci.appveyor.com/project/whs/whiskeyslug'
             ThenBuildServerIs ([Whiskey.BuildServer]::AppVeyor)
         }
+
+        It 'ignores environment variables that exist with no value' {
+            GivenEnv @{
+                'APPVEYOR_BUILD_NUMBER' = '113'
+                'APPVEYOR_BUILD_ID' = '10187822'
+                'APPVEYOR_PROJECT_NAME' = 'WhiskeyName'
+                'APPVEYOR_PROJECT_SLUG' = 'whiskeyslug'
+                'APPVEYOR_REPO_PROVIDER' = 'gitHub'
+                'APPVEYOR_REPO_NAME' = 'webmd-health-services/Whiskey'
+                'APPVEYOR_REPO_BRANCH' = 'master'
+                'APPVEYOR_REPO_COMMIT' = 'new_commit_id'
+                'APPVEYOR_ACCOUNT_NAME' = 'whs'
+                'APPVEYOR_BUILD_VERSION' = '1.1.1+112'
+                'APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH' = ''
+                'APPVEYOR_PULL_REQUEST_HEAD_COMMIT' = ''
+            }
+            WhenGettingBuildMetadata
+            ThenBuildMetadataIs -BuildNumber '113' `
+                                -BuildID '10187822' `
+                                -JobName 'WhiskeyName' `
+                                -BuildUri 'https://ci.appveyor.com/project/whs/whiskeyslug/build/1.1.1+112' `
+                                -ScmUri 'https://github.com/webmd-health-services/Whiskey.git' `
+                                -ScmCommit 'new_commit_id' `
+                                -ScmBranch 'master' `
+                                -JobUri 'https://ci.appveyor.com/project/whs/whiskeyslug'
+            ThenBuildServerIs ([Whiskey.BuildServer]::AppVeyor)
+        }
     }
 
     Context 'TeamCity' {
