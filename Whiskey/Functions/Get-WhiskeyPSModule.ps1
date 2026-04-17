@@ -48,7 +48,9 @@ function Get-WhiskeyPSModule
         [String]$Version,
 
         [Parameter(Mandatory)]
-        $PSModulesRoot
+        $PSModulesRoot,
+
+        [switch] $AllowPrerelease
     )
 
     Set-StrictMode -Version 'Latest'
@@ -98,7 +100,12 @@ function Get-WhiskeyPSModule
                     }
                 }
 
-                if( $prerelease )
+                if ($prerelease -and -not $AllowPrerelease)
+                {
+                    return $false
+                }
+
+                if ($prerelease)
                 {
                     $moduleVersion = "$($moduleVersion)-$($prerelease)"
                 }

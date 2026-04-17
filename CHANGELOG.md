@@ -3,7 +3,14 @@
 
 # Whiskey Changelog
 
+## 0.65.2
+
+* Fixed: Whiskey fails to import a module if a prerelease version is already installed.
+* Fixed: Whiskey fails to install and import a prerelease version of a module requested by a tool.
+
 ## 0.65.1
+
+> Released 13 Apr 2026
 
 Fixed: Build metadata doesn't get properly set on AppVeyor Linux builds because on that platform, PR-specific
 environment variables exist but don't have values, a situation Whiskey wasn't handling.

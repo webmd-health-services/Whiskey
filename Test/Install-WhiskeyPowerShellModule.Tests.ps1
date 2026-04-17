@@ -43,7 +43,8 @@ BeforeAll {
             $Name,
             $Version,
             [switch]$SkipImport,
-            $Path
+            $Path,
+            $AllowPrerelease
         )
 
         $parameter = $PSBoundParameters
@@ -52,16 +53,49 @@ BeforeAll {
         Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyPowerShellModule' -Parameter $PSBoundParameters -ErrorAction $ErrorActionPreference
     }
 
+    function Get-SemVer
+    {
+        param(
+            [Parameter(Mandatory, ValueFromPipeline)]
+            [Object] $Module
+        )
+
+        process
+        {
+            $semver = $module.Version.ToString()
+            $prerelease = ''
+            if ($Module | Get-Member -Name 'Prerelease')
+            {
+                $prerelease = $Module.Prerelease
+            }
+            else
+            {
+                if ($Module.PrivateData.ContainsKey('PSData') -and $Module.PrivateData['PSData'].ContainsKey('Prerelease'))
+                {
+                    $prerelease = $Module.PrivateData['PSData']['Prerelease']
+                }
+            }
+
+            if ($prerelease)
+            {
+                return "${semver}-${prerelease}"
+            }
+
+            return $semver
+        }
+    }
+
     function ThenModuleImported
     {
         param(
-            [String]$AtVersion = $script:expectedModuleVersion,
-            [String]$From
+            [String] $Named = $script:expectedModuleName,
+            [String] $AtVersion = $script:expectedModuleVersion,
+            [String] $From
         )
 
-        $module = Get-Module -Name $script:expectedModuleName
+        $module = Get-Module -Name $Named
         $module | Should -Not -BeNullOrEmpty
-        $module.Version | Should -Be $AtVersion
+        $module | Get-SemVer | Should -Be $AtVersion
     }
 
     function ThenModuleInstalled
@@ -76,13 +110,23 @@ BeforeAll {
         $path = $script:result.Path
         $errors = @()
         $module = Start-Job {
-            Import-Module -Name $using:path -RequiredVersion $using:AtVersion -PassThru -WarningAction Ignore
+            Import-Module -Name $using:path -PassThru -WarningAction Ignore
         } | Wait-Job | Receive-Job -ErrorVariable 'errors'
         $errors | Should -BeNullOrEmpty
         $module | Should -Not -BeNullOrEmpty
-        $module.Version | Should -Be $AtVersion
+        $module | Get-SemVer | Should -Be $AtVersion
 
-        Join-Path -Path $script:testDirPath -ChildPath "$($In)\$($Name)\$($AtVersion)" |
+        [Version]$version = '0.0.0'
+        if ($AtVersion.Contains('-'))
+        {
+            $version,$null = $AtVersion.Split('-', 2)
+        }
+        else
+        {
+            $version = $AtVersion
+        }
+
+        Join-Path -Path $script:testDirPath -ChildPath "$($In)\$($Name)\$($version)" |
             Should -Exist
     }
 
@@ -132,7 +176,8 @@ BeforeAll {
             $ForModule,
             $Version,
             [switch]$SkipImport,
-            [String]$AtPath
+            [String]$AtPath,
+            [hashtable] $WithArgs = @{}
         )
 
         $script:expectedModuleName = $ForModule
@@ -174,22 +219,20 @@ BeforeAll {
                  -MockWith { $script:installedModules | Write-Output }.GetNewClosure()
         }
 
-        $conditionalParams = @{}
-
-        if( $AtPath )
+        if ($AtPath)
         {
-            $conditionalParams['Path'] = $AtPath
+            $WithArgs['Path'] = $AtPath
         }
 
-        if( $SkipImport )
+        if ($SkipImport)
         {
-            $conditionalParams['SkipImport'] = $true
+            $WithArgs['SkipImport'] = $true
         }
 
         Push-Location $script:testDirPath
         try
         {
-            $script:result = Install-PowerShellModule -Name $ForModule -Version $Version @conditionalParams
+            $script:result = Install-PowerShellModule -Name $ForModule -Version $Version @WithArgs
         }
         finally
         {
@@ -408,5 +451,20 @@ Describe 'Install-WhiskeyPowerShellModule' {
         ThenNoModuleInfoReturned
         ThenModuleNotInstalled
         ThenModuleNotImported
+    }
+
+    # This covers a situation where a user installed a custom, prerelease version of a module (ProGetAutomation) into
+    # PSModules and Whiskey's couldn't import it.
+    It 'handles conflicts between user-installed and task installed modules' {
+        WhenInstallingPSModule 'ProGetAutomation' -Version '3.3.0-rc2' -WithArgs @{ AllowPrerelease = $true }
+        ThenNoErrors
+        ThenModuleImported -Named 'ProGetAutomation' -AtVersion '3.3.0-rc2'
+        ThenModuleInstalled -Name 'ProGetAutomation' -AtVersion '3.3.0-rc2'
+        # This could fail if a global version of ProGetAutomation is installed.
+        WhenInstallingPSModule 'ProGetAutomation' -Version '3.*'
+        ThenNoErrors
+        $expectedVersion = (Find-Module -Name 'ProGetAutomation' -MaximumVersion 3.99).Version | Select-Object -First 1
+        ThenModuleImported -Named 'ProGetAutomation' -AtVersion $expectedVersion
+        ThenModuleInstalled -Name 'ProGetAutomation' -AtVersion $expectedVersion
     }
 }
