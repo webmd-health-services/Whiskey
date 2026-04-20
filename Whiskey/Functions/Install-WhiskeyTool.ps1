@@ -144,10 +144,11 @@ function Install-WhiskeyTool
             if( $ToolInfo -is [Whiskey.RequiresPowerShellModuleAttribute] )
             {
                 $module = Install-WhiskeyPowerShellModule -Name $Name `
-                                                        -Version $Version `
-                                                        -BuildRoot $InstallRoot `
-                                                        -SkipImport:$ToolInfo.SkipImport `
-                                                        -ErrorAction Stop
+                                                          -Version $Version `
+                                                          -BuildRoot $InstallRoot `
+                                                          -SkipImport:$ToolInfo.SkipImport `
+                                                          -AllowPrerelease:($Version -and $Version.Contains('-')) `
+                                                          -ErrorAction Stop
 
                 if( $ToolInfo.ModuleInfoParameterName )
                 {

@@ -60,7 +60,6 @@ $pester4Tests = @(
     'GetPowerShellModule.Tests.ps1',
     'GitHubRelease.Tests.ps1',
     'Import-Whiskey.ps1.Tests.ps1',
-    'Import-WhiskeyPowerShellModule.Tests.ps1',
     'Import-WhiskeyYaml.Tests.ps1',
     'Install-WhiskeyDotNetSdk.Tests.ps1',
     'Invoke-WhiskeyDotNetCommand.Tests.ps1',

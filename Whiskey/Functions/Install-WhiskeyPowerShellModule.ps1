@@ -6,7 +6,8 @@ function Install-WhiskeyPowerShellModule
     Installs a PowerShell module.
 
     .DESCRIPTION
-    The `Install-WhiskeyPowerShellModule` function installs a PowerShell module into a "PSModules" directory in the current working directory. It returns the path to the module.
+    The `Install-WhiskeyPowerShellModule` function installs a PowerShell module into a "PSModules" directory in the
+    current working directory. It returns the path to the module.
 
     .EXAMPLE
     Install-WhiskeyPowerShellModule -Name 'Pester' -Version '4.3.0'
@@ -34,7 +35,9 @@ function Install-WhiskeyPowerShellModule
         [String]$Version,
 
         [Parameter(Mandatory)]
-        # Modules are saved into a PSModules directory. This is the directory where PSModules directory should created, *not* the path to the PSModules directory itself, i.e. this is the path to the "PSModules" directory's parent directory.
+        # Modules are saved into a PSModules directory. This is the directory where PSModules directory should created,
+        # *not* the path to the PSModules directory itself, i.e. this is the path to the "PSModules" directory's parent
+        # directory.
         [String]$BuildRoot,
 
         # The path to a custom directory where you want the module installed. The default is `PSModules` in the build
@@ -51,22 +54,62 @@ function Install-WhiskeyPowerShellModule
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
+    function Import-InstalledModule
+    {
+        [CmdletBinding()]
+        param(
+            [Parameter(Mandatory, ParameterSetName='Module', ValueFromPipeline)]
+            [Object] $Module
+        )
+
+        process
+        {
+            $numErrorsBefore = $Global:Error.Count
+            try
+            {
+                & {
+                    $loadedModules = Get-Module -Name $Module.Name
+                    $loadedModules |
+                        Where-Object 'Version' -ne $Module.Version |
+                        Remove-Module -Verbose:$false -WhatIf:$false -Force
+
+                    if( ($loadedModules | Where-Object 'Version' -eq $Module.Version) )
+                    {
+                        Write-WhiskeyDebug -Message ("Module $($Module.Name) $($Module.Version) already loaded.")
+                    }
+
+                    $Module | Import-Module -Global -ErrorAction Stop -Verbose:$false -WarningAction 'Ignore'
+                } 4> $null
+            }
+            finally
+            {
+                # Some modules (...cough...PowerShellGet...cough...) write silent errors during import. This causes our
+                # tests to fail. I know this is a little extreme.
+                $numToRemove = $Global:Error.Count - $numErrorsBefore
+                for( $idx = 0; $idx -lt $numToRemove; $idx++ )
+                {
+                    $Global:Error.RemoveAt(0)
+                }
+            }
+        }
+    }
+
+    function Find-PSModule
+    {
+        $findParameters = @{
+            'Name' = $Name;
+            'BuildRoot' = $BuildRoot;
+            'AllowPrerelease' = $AllowPrerelease;
+            'Version' = $Version;
+        }
+
+        return Find-WhiskeyPowerShellModule @findParameters
+    }
+
     Write-WhiskeyDebug "\Install-WhiskeyPowerShellModule\" -Indent
 
     try
     {
-        function Find-PSModule
-        {
-            $findParameters = @{
-                'Name' = $Name;
-                'BuildRoot' = $BuildRoot;
-                'AllowPrerelease' = $AllowPrerelease;
-                'Version' = $Version;
-            }
-
-            return Find-WhiskeyPowerShellModule @findParameters
-        }
-
         Write-WhiskeyDebug ($PSBoundParameters | Format-Table | Out-String)
         if( $Path )
         {
@@ -108,9 +151,12 @@ function Install-WhiskeyPowerShellModule
 
         try
         {
-            $installedModule = Get-WhiskeyPSModule -PSModulesRoot $BuildRoot -Name $Name -Version $Version
+            $installedModule = Get-WhiskeyPSModule -PSModulesRoot $BuildRoot `
+                                                   -Name $Name `
+                                                   -Version $Version `
+                                                   -AllowPrerelease:$AllowPrerelease
 
-            if( $installedModule )
+            if ($installedModule)
             {
                 Write-WhiskeyDebug "Module $($Name) $($Version) found:$([Environment]::NewLine)$($installedModule | Format-List)"
                 $installedInPSModulePath = -not $Path
@@ -120,7 +166,7 @@ function Install-WhiskeyPowerShellModule
                 {
                     if( -not $SkipImport )
                     {
-                        Import-WhiskeyPowerShellModule -Name $Name -Version $installedModule.Version -PSModulesRoot $BuildRoot
+                        $installedModule | Import-InstalledModule
                     }
 
                     # Already installed or installed where the user wants it.
@@ -176,14 +222,16 @@ function Install-WhiskeyPowerShellModule
                 $Global:ProgressPreference = $globalProgressPref
             }
             $installedModule = Get-WhiskeyPSModule -PSModulesRoot $BuildRoot `
-                                                -Name $moduleToInstall.Name `
-                                                -Version $moduleToInstall.Version
+                                                   -Name $moduleToInstall.Name `
+                                                   -Version $moduleToInstall.Version `
+                                                   -AllowPrerelease:$AllowPrerelease
 
             if( -not $installedModule )
             {
-                $msg = "Failed to download PowerShell module $($moduleToInstall.Name) $($moduleToInstall.Version) from " +
-                    "repository $($moduleToInstall.Repository) to ""$($installRoot | Resolve-Path -Relative)"": the " +
-                    'module doesn''t exist after running PowerShell''s "Save-Module" command.'
+                $msg = "Failed to download PowerShell module $($moduleToInstall.Name) $($moduleToInstall.Version) " +
+                       "from repository $($moduleToInstall.Repository) to " +
+                       """$($installRoot | Resolve-Path -Relative)"": the module doesn't exist after running " +
+                       'PowerShell''s "Save-Module" command.'
                 Write-WhiskeyError -Message $msg
                 return
             }
@@ -192,7 +240,7 @@ function Install-WhiskeyPowerShellModule
 
             if( -not $SkipImport )
             {
-                Import-WhiskeyPowerShellModule -Name $Name -Version $installedModule.Version -PSModulesRoot $BuildRoot
+                $installedModule | Import-InstalledModule
             }
         }
         finally

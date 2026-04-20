@@ -6,7 +6,6 @@ $moduleName = $null
 $moduleVersion = $null
 $output = $null
 $testRoot = $null
-$originalPSModulePath = $null
 $packageManagementModulesNotInstalled = $false
 
 function GivenName
@@ -79,83 +78,6 @@ function Reset
     Reset-WhiskeyPSModulePath
 }
 
-function ThenPkgManagementModules
-{
-    [CmdletBinding(DefaultParameterSetName='ImportedAndOrInstalled')]
-    param(
-        [Parameter(Position=0)]
-        [String]$Named,
-
-        [Parameter(Mandatory,ParameterSetName='NotInstalled')]
-        [Parameter(Mandatory,ParameterSetName='NotImported')]
-        [switch]$Not,
-
-        [Parameter(Mandatory,ParameterSetName='NotImported')]
-        [Parameter(ParameterSetName='ImportedAndOrInstalled')]
-        [switch]$Imported,
-
-        [Parameter(Mandatory,ParameterSetName='NotInstalled')]
-        [Parameter(ParameterSetName='ImportedAndOrInstalled')]
-        [switch]$Installed
-    )
-
-    if( $Imported )
-    {
-        $times = 1
-        if( $Not )
-        {
-            $times = 0
-        }
-
-        $modulesRoot = $script:testRoot
-
-        if( -not $Named -or $Named -eq 'PackageManagement' )
-        {
-            $pkgMgmtVersion = $script:packageManagementVersion
-            Assert-MockCalled -CommandName 'Import-WhiskeyPowerShellModule' `
-                            -ModuleName 'Whiskey' `
-                            -Times $times `
-                            -Exactly `
-                            -ParameterFilter { 
-                                    $Name -eq 'PackageManagement' -and `
-                                    $PSModulesRoot -eq $modulesRoot -and `
-                                    $Version -eq $pkgMgmtVersion 
-                                }
-        }
-
-        if( -not $Named -or $Named -eq 'PowerShellGet' )
-        {
-            $psGetVersion = $script:powerShellGetVersion
-            Assert-MockCalled -CommandName 'Import-WhiskeyPowerShellModule' `
-                            -ModuleName 'Whiskey' `
-                            -Times $times `
-                            -Exactly `
-                            -ParameterFilter { 
-                                    $Name -eq 'PowerShellGet' -and `
-                                    $PSModulesRoot -eq $modulesRoot -and `
-                                    $Version -eq $psGetVersion 
-                            }
-        }
-    }
-
-    if( $Installed )
-    {
-        if( -not $Named -or $Named -eq 'PackageManagement' )
-        {
-            $pkgMgmtPath = Join-Path -Path $testRoot -ChildPath "PSModules\PackageManagement\$($packageManagementVersion)"
-            Join-Path -Path $pkgMgmtPath -ChildPath "notinstalled" | Should -Not:(-not $Not) -Exist
-            Join-Path -Path $pkgMgmtPath -ChildPath "PackageManagement.psd1" | Should -Exist
-        }
-
-        if( -not $Named -or $Named -eq 'PowerShellGet' )
-        {
-            $pwshGetPath = Join-Path -Path $testRoot -ChildPath "PSModules\PowerShellGet\$($powerShellGetVersion)"
-            Join-Path -Path $pwshGetPath -ChildPath "notinstalled" | Should -Not:(-not $Not) -Exist
-            Join-Path -Path $pwshGetPath -ChildPath "PowerShellGet.psd1" | Should -Exist
-        }
-    }
-}
-
 function ThenReturnedModule
 {
     param(
@@ -194,7 +116,7 @@ function ThenErrorMessage
         $Message
     )
 
-    $Global:Error | Should -Match $Message 
+    $Global:Error | Should -Match $Message
 }
 
 function WhenResolvingPowerShellModule
@@ -202,8 +124,6 @@ function WhenResolvingPowerShellModule
     [CmdletBinding()]
     param(
     )
-
-    Mock -CommandName 'Import-WhiskeyPowershellModule' -ModuleName 'Whiskey'
 
     $parameter = @{
         'Name' = $moduleName;
