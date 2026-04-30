@@ -251,15 +251,18 @@ Describe 'Get-WhiskeyBuildMetadata' {
                 'GIT_BRANCH' = 'PR-47'
                 'CHANGE_BRANCH' = 'origin/feature/pr'
             }
+            $mockSourceCommitId = 'abcd1234'
+            Mock -CommandName 'git' -ModuleName 'Whiskey' -MockWith {return $mockSourceCommitId}
             WhenGettingBuildMetadata
             ThenBuildMetadataIs -BuildNumber '28' `
                                 -BuildID 'jenkins_Fubar_28' `
                                 -JobName 'Fubar' `
                                 -BuildUri 'https://build.example.com' `
                                 -ScmUri 'https://git.example.com' `
-                                -ScmCommit 'new_commit_id' `
+                                -ScmCommit $mockSourceCommitId `
                                 -ScmBranch 'feature/pr' `
                                 -JobUri 'https://job.example.com'
+            Assert-MockCalled -CommandName 'git' -ModuleName 'Whiskey' -Times 1
         }
     }
 

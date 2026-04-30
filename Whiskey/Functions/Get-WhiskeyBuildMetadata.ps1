@@ -63,6 +63,17 @@ function Get-WhiskeyBuildMetadata
         # For PR builds, GIT_BRANCH gets set to `PR-ID` where ID is a the PR number and CHANGE_BRANCH is the source
         # branch, so always use CHANGE_BRANCH if it exists.
         $scmBranch = Get-EnvironmentVariable 'CHANGE_BRANCH','GIT_BRANCH'
+        if (Test-Path -Path 'env:CHANGE_BRANCH')
+        {
+            $branchRef = $scmBranch
+            if (-not $branchRef.Contains('origin'))
+            {
+                $branchRef = "origin/${branchRef}"
+            }
+            # In a PR build, Jenkins doesn't provide the commit ID of the source branch.
+            $buildInfo.ScmCommitID = git rev-parse $branchRef
+        }
+
         $buildInfo.ScmBranch = $scmBranch -replace '^origin/',''
         $buildInfo.BuildServer = [Whiskey.BuildServer]::Jenkins
     }
@@ -140,4 +151,3 @@ function Get-WhiskeyBuildMetadata
 
     return $buildInfo
 }
-
