@@ -3,6 +3,10 @@
 
 # Whiskey Changelog
 
+## 0.65.3
+
+Fixed: In Jenkins, the commit ID for PR builds is set to the transient merge commit ID instead of the source branch's commit ID.
+
 ## 0.65.2
 
 * Fixed: Whiskey fails to import a module if a prerelease version is already installed.
