@@ -3,6 +3,11 @@
 
 # Whiskey Changelog
 
+## 0.65.4
+
+* Improved build and test pipeline configurations.
+* Build script updated to use LTS version of .NET.
+
 ## 0.65.3
 
 Fixed: In Jenkins, the commit ID for PR builds is set to the transient merge commit ID instead of the source branch's commit ID.
