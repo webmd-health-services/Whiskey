@@ -28,21 +28,29 @@ environment:
   #   job_group: ps
   #   appveyor_build_worker_image: Visual Studio 2013
 
+  - job_name: Build
+    job_group: build
+    appveyor_build_worker_image: Visual Studio 2022
+
   - job_name: Windows PowerShell 5.1/.NET 4.8
     job_group: ps
     appveyor_build_worker_image: Visual Studio 2017 # Has minimum PackageManagement and PowerShellGet modules.
+    job_depends_on: Build
 
   - job_name: PowerShell 6.2 on Windows
     job_group: pwsh-win
     appveyor_build_worker_image: Visual Studio 2015
+    job_depends_on: Build
 
   - job_name: PowerShell 7.2 on Ubuntu
     job_group: pwsh-nix
     appveyor_build_worker_image: Ubuntu2004
+    job_depends_on: Build
 
   - job_name: PowerShell 7.1 on Windows
     job_group: pwsh-win
     appveyor_build_worker_image: Visual Studio 2019
+    job_depends_on: Build
 
 
 artifacts:
@@ -50,6 +58,17 @@ artifacts:
 
 
 for:
+# Singular build job
+- matrix:
+    only:
+    - job_group: build
+  build_script:
+  - ps: |
+        $ProgressPreference = 'SilentlyContinue'
+        iwr https://raw.githubusercontent.com/webmd-health-services/Prism/main/Scripts/init.ps1 | iex | Format-Table
+        .\build.ps1
+
+
 # Build in Windows PowerShell
 - matrix:
     only:
@@ -60,7 +79,8 @@ for:
         try
         {
             iwr https://raw.githubusercontent.com/webmd-health-services/Prism/main/Scripts/init.ps1 | iex | Format-Table
-            .\build.ps1
+            .\Get-WhiskeyZipArtifact.ps1 -Token $env:APPVEYOR_BEARER_TOKEN -JobName 'Build'
+            .\build.ps1 -PipelineName 'Tests'
         }
         finally
         {

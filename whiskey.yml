@@ -84,4 +84,5 @@ Build:
 - Exec: appveyor PushArtifact 'Whiskey/build.ps1' -DeploymentName GitHub
   .OnlyBy: BuildServer
 
+Tests:
 - PowerShell: .\Test-Whiskey.ps1 -RunnerCount $env:WHISKEY_CI_NUM_TEST_RUNNERS
