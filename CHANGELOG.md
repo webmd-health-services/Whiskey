@@ -3,16 +3,27 @@
 
 # Whiskey Changelog
 
+## 0.65.5
+
+Fixed: `Version` task fails to increment patch and prerelease versions for NuGet packages if only v3 API NuGet sources
+are configured.
+
 ## 0.65.4
+
+> Unreleased
 
 * Improved build and test pipeline configurations.
 * Build script updated to use LTS version of .NET.
 
 ## 0.65.3
 
+> Released 14 May 2026
+
 Fixed: In Jenkins, the commit ID for PR builds is set to the transient merge commit ID instead of the source branch's commit ID.
 
 ## 0.65.2
+
+> Released 20 Apr 2026
 
 * Fixed: Whiskey fails to import a module if a prerelease version is already installed.
 * Fixed: Whiskey fails to install and import a prerelease version of a module requested by a tool.

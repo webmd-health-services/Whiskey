@@ -294,10 +294,7 @@ function Set-WhiskeyVersion
                     {
                         $msg = "Retrieving versions for NuGet package ""$($NuGetPackageID)""."
                         Write-WhiskeyVerbose -Context $TaskContext -Message $msg
-                        $allowPrereleaseArg = Get-AllowPrereleaseArg -CommandName 'Find-Package' -AllowPrerelease
-                        $versions =
-                            Find-Package -Name $NuGetPackageID -ProviderName 'NuGet' -AllVersions @allowPrereleaseArg |
-                            Select-Object -ExpandProperty 'Version'
+                        $versions = Find-WhiskeyNuGetPackageVersion -ID $NuGetPackageID
                     }
                 }
             }
@@ -389,10 +386,7 @@ function Set-WhiskeyVersion
         {
             $msg = "Retrieving versions for NuGet package ""$($NuGetPackageID)""."
             Write-WhiskeyVerbose -Context $TaskContext -Message $msg
-            $allowPrereleaseArg = Get-AllowPrereleaseArg -CommandName 'Find-Package' -AllowPrerelease
-            $versions =
-                Find-Package -Name $NuGetPackageID -ProviderName 'NuGet' -AllVersions @allowPrereleaseArg |
-                Select-Object -ExpandProperty 'Version'
+            $versions = Find-WhiskeyNuGetPackageVersion -ID $NuGetPackageID
         }
     }
 
