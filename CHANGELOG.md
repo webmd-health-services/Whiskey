@@ -3,7 +3,13 @@
 
 # Whiskey Changelog
 
+## 0.65.6
+
+Fixed: builds using default build.ps1 script can fail if a task writes an error.
+
 ## 0.65.5
+
+> Released 14 Aug 2026
 
 Fixed: `Version` task fails to increment patch and prerelease versions for NuGet packages if only v3 API NuGet sources
 are configured.
