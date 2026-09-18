@@ -5,7 +5,13 @@
 
 ## 0.66.0
 
-Fixed: `Version` task fails to increment prerelease and patch version numbers for .NET libraries that use SDK-style
+### Added
+
+`ProGetUniversalPackage` task: package's group name is now allowed to be part of the package's name.
+
+### Fixed
+
+`Version` task fails to increment prerelease and patch version numbers for .NET libraries that use SDK-style
 project files.
 
 ## 0.65.6
