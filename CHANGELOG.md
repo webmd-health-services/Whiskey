@@ -3,7 +3,14 @@
 
 # Whiskey Changelog
 
+## 0.66.0
+
+Fixed: `Version` task fails to increment prerelease and patch version numbers for .NET libraries that use SDK-style
+project files.
+
 ## 0.65.6
+
+> Released 18 Aug 2026
 
 Fixed: builds using default build.ps1 script can fail if a task writes an error.
 

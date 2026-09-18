@@ -17,6 +17,7 @@ BeforeAll {
     $script:versions = @()
     $script:credentials = [Dictionary[String,pscredential]]::New()
     $script:apikeys = [Dictionary[String,String]]::New()
+    $script:nugetPkgVersions = $null
 
     function GivenApiKey
     {
@@ -67,6 +68,22 @@ BeforeAll {
         )
 
         $script:versions = [pscustomobject]@{ versions = $Version }
+    }
+
+    function GivenNuGetPackage
+    {
+        [CmdletBinding()]
+        param(
+            [Parameter(Mandatory, Position=0)]
+            [String] $WithID,
+
+            [String[]] $HasVersions
+        )
+
+        if ($PSBoundParameters.ContainsKey('HasVersions'))
+        {
+            $script:nugetPkgVersions = $HasVersions
+        }
     }
 
     function ThenErrorIs
@@ -219,6 +236,12 @@ BeforeAll {
             Add-WhiskeyApiKey -Context $script:context -ID $apikeyID -Value $script:apikeys[$apikeyID]
         }
 
+        if ($null -ne $script:nugetPkgVersions)
+        {
+            $nugetPkgVersions = $script:nugetPkgVersions
+            Mock -CommandName 'Find-WhiskeyNuGetPackageVersion' -ModuleName 'Whiskey' -MockWith { $nugetPkgVersions }
+        }
+
         $Global:Error.Clear()
         try
         {
@@ -244,6 +267,8 @@ Describe 'Version' {
         $script:branch = $null
         $script:versions = @()
         $script:apikeys.Clear()
+        $script:nugetPkgVersions = $null
+
         $script:credentials.Clear()
         $script:initialVersion = Invoke-WhiskeyPrivateCommand -Name 'New-WhiskeyVersionObject' `
                                                                 -Parameter @{ 'SemVer' = '0.0.0' }
@@ -496,6 +521,21 @@ Describe 'Version' {
             ThenSemVer1Is '3.0.0-alpha0'
             ThenSemVer2Is '3.0.0-alpha-0'
         }
+    }
+
+    It 'uses csproj file name as package id' {
+        GivenFile 'lib.csproj' @'
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Version>4.0.0-beta-0</Version>
+  </PropertyGroup>
+</Project>
+'@
+        GivenNuGetPackage 'lib' -HasVersions '4.0.0-beta3'
+        WhenRunningTask -WithProperties @{ Path = 'lib.csproj'; IncrementPrereleaseVersion = $true;  }
+        ThenVersionIs '4.0.0'
+        ThenSemVer1Is '4.0.0-beta4'
+        ThenSemVer2Is '4.0.0-beta-4'
     }
 
     It 'should read from from csproj file that has an XML namespace' {
