@@ -145,7 +145,7 @@ function Install-WhiskeyTool
             {
                 $module = Install-WhiskeyPowerShellModule -Name $Name `
                                                           -Version $Version `
-                                                          -BuildRoot $InstallRoot `
+                                                          -PSModulesParentDirPath $InstallRoot `
                                                           -SkipImport:$ToolInfo.SkipImport `
                                                           -AllowPrerelease:($Version -and $Version.Contains('-')) `
                                                           -ErrorAction Stop

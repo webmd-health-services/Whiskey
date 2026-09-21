@@ -34,11 +34,11 @@ function Install-WhiskeyPowerShellModule
         # The version of the module to install.
         [String]$Version,
 
-        [Parameter(Mandatory)]
         # Modules are saved into a PSModules directory. This is the directory where PSModules directory should created,
         # *not* the path to the PSModules directory itself, i.e. this is the path to the "PSModules" directory's parent
         # directory.
-        [String]$BuildRoot,
+        [Parameter(Mandatory)]
+        [String] $PSModulesParentDirPath,
 
         # The path to a custom directory where you want the module installed. The default is `PSModules` in the build
         # directory.
@@ -98,7 +98,7 @@ function Install-WhiskeyPowerShellModule
     {
         $findParameters = @{
             'Name' = $Name;
-            'PSModulesParentDirPath' = $BuildRoot;
+            'PSModulesParentDirPath' = $PSModulesParentDirPath;
             'AllowPrerelease' = $AllowPrerelease;
             'Version' = $Version;
         }
@@ -116,7 +116,7 @@ function Install-WhiskeyPowerShellModule
             $Path = $Path.TrimEnd([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
             if( -not [IO.Path]::IsPathRooted($Path) )
             {
-                $Path = Join-Path -Path $BuildRoot -ChildPath $Path
+                $Path = Join-Path -Path $PSModulesParentDirPath -ChildPath $Path
                 $Path = [IO.Path]::GetFullPath($Path)
             }
             if( -not (Test-Path -Path $Path) )
@@ -131,7 +131,7 @@ function Install-WhiskeyPowerShellModule
         }
         else
         {
-            $installRoot = Get-WhiskeyPSModulePath -PSModulesParentDirPath $BuildRoot -Create
+            $installRoot = Get-WhiskeyPSModulePath -PSModulesParentDirPath $PSModulesParentDirPath -Create
         }
         Write-WhiskeyDebug "Module $($Name) $($Version) will be installed to ""$($installRoot)""."
 
@@ -151,7 +151,7 @@ function Install-WhiskeyPowerShellModule
 
         try
         {
-            $installedModule = Get-WhiskeyPSModule -PSModulesRoot $BuildRoot `
+            $installedModule = Get-WhiskeyPSModule -PSModulesRoot $PSModulesParentDirPath `
                                                    -Name $Name `
                                                    -Version $Version `
                                                    -AllowPrerelease:$AllowPrerelease
@@ -221,7 +221,7 @@ function Install-WhiskeyPowerShellModule
             {
                 $Global:ProgressPreference = $globalProgressPref
             }
-            $installedModule = Get-WhiskeyPSModule -PSModulesRoot $BuildRoot `
+            $installedModule = Get-WhiskeyPSModule -PSModulesRoot $PSModulesParentDirPath `
                                                    -Name $moduleToInstall.Name `
                                                    -Version $moduleToInstall.Version `
                                                    -AllowPrerelease:$AllowPrerelease

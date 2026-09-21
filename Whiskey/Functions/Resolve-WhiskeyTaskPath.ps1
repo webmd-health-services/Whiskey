@@ -172,7 +172,10 @@ function Resolve-WhiskeyTaskPath
 
         if( $UseGlob )
         {
-            Install-WhiskeyPowerShellModule -Name 'Glob' -Version '0.1.*' -BuildRoot $TaskContext.BuildRoot -ErrorAction Stop |
+            Install-WhiskeyPowerShellModule -Name 'Glob' `
+                                            -Version '0.1.*' `
+                                            -PSModulesParentDirPath $TaskContext.BuildRoot `
+                                            -ErrorAction Stop |
                 Out-Null
         }
 

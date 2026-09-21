@@ -55,7 +55,7 @@ function Get-WhiskeyPowerShellModule
     Write-WhiskeyInfo -Context $TaskContext -Message ('Installing PowerShell module {0} {1} to {2}.' -f $Name,$module.Version,$Path)
     $moduleRoot = Install-WhiskeyPowerShellModule -Name $Name `
                                                   -Version $module.Version `
-                                                  -BuildRoot $TaskContext.BuildRoot `
+                                                  -PSModulesParentDirPath $TaskContext.BuildRoot `
                                                   -SkipImport:(-not $Import) `
                                                   -AllowPrerelease:$AllowPrerelease `
                                                   -Path $fullPath `
