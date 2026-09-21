@@ -74,7 +74,8 @@ function Init
 function Reset
 {
     Reset-WhiskeyTestPSModule
-    Invoke-WhiskeyPrivateCommand -Name 'Unregister-WhiskeyPSModulePath' -Parameter @{ 'PSModulesRoot' = $testRoot }
+    Invoke-WhiskeyPrivateCommand -Name 'Unregister-WhiskeyPSModulePath' `
+                                 -Parameter @{ 'PSModulesParentDirPath' = $testRoot }
     Reset-WhiskeyPSModulePath
 }
 

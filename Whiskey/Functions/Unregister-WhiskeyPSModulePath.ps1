@@ -4,10 +4,10 @@ function Unregister-WhiskeyPSModulePath
     [CmdletBinding()]
     param(
         [Parameter(Mandatory,ParameterSetName='FromUser')]
-        [String]$Path,
+        [String] $Path,
 
         [Parameter(Mandatory,ParameterSetName='FromWhiskey')]
-        [String]$PSModulesRoot
+        [String] $PSModulesParentDirPath
     )
 
     Set-StrictMode -Version 'Latest'
@@ -15,7 +15,7 @@ function Unregister-WhiskeyPSModulePath
 
     if( $PSCmdlet.ParameterSetName -eq 'FromWhiskey' )
     {
-        $Path = Get-WhiskeyPSModulePath -PSModulesParentDirPath $PSModulesRoot
+        $Path = Get-WhiskeyPSModulePath -PSModulesParentDirPath $PSModulesParentDirPath
     }
 
     $pathBefore = $env:PSModulePath -split [IO.Path]::PathSeparator
