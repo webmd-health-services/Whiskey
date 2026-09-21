@@ -37,19 +37,19 @@ function Set-WhiskeyBuildStatus
         {
             'BitbucketServer'
             {
-                Install-WhiskeyPowerShellModule -Name 'BitbucketServerAutomation' -Version '0.9.*' -BuildRoot $Context.BuildRoot
+                Install-WhiskeyPowerShellModule -Name 'BitbucketServerAutomation' -Version '0.9.*' -PSModulesParentDirPath $Context.BuildRoot
 
                 $uri = $reporterConfig['Uri']
                 if( -not $uri )
                 {
                     Stop-WhiskeyTask -TaskContext $Context -PropertyDescription $propertyDescription -Message (@'
 Property 'Uri' does not exist or does not have a value. Set this property to the Bitbucket Server URI where you want build statuses reported to, e.g.,
- 
+
     PublishBuildStatusTo:
     - BitbucketServer:
         Uri: BITBUCKET_SERVER_URI
         CredentialID: CREDENTIAL_ID
-        
+
 '@ -f $uri)
                     return
                 }
@@ -58,12 +58,12 @@ Property 'Uri' does not exist or does not have a value. Set this property to the
                 {
                     Stop-WhiskeyTask -TaskContext $Context -PropertyDescription $propertyDescription -Message (@'
 Property 'CredentialID' does not exist or does not have a value. Set this property to the ID of the credential to use when connecting to the Bitbucket Server at '{0}', e.g.,
- 
+
     PublishBuildStatusTo:
     - BitbucketServer:
         Uri: {0}
         CredentialID: CREDENTIAL_ID
- 
+
 Use the `Add-WhiskeyCredential` function to add the credential to the build.`
 '@ -f $uri)
                     return

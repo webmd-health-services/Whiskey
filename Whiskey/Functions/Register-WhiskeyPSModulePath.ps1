@@ -12,19 +12,19 @@ function Register-WhiskeyPSModulePath
         [String]$Path,
 
         [Parameter(Mandatory,ParameterSetName='FromWhiskey')]
-        [String]$PSModulesRoot
+        [String]$PSModulesParentDirPath
     )
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
 
     Write-WhiskeyDebug '\Register-WhiskeyPSModulePath\' -Indent
-    
+
     try
     {
         if( $PSCmdlet.ParameterSetName -eq 'FromWhiskey' )
         {
-            $Path = Get-WhiskeyPSModulePath -PSModulesRoot $PSModulesRoot
+            $Path = Get-WhiskeyPSModulePath -PSModulesParentDirPath $PSModulesParentDirPath
         }
 
         $pathBefore = $env:PSModulePath -split [IO.Path]::PathSeparator

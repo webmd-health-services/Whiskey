@@ -258,6 +258,7 @@ BeforeAll {
                     Find-Package -Name $Package -ProviderName 'NuGet' |
                     Select-Object -First 1 |
                     Select-Object -ExpandProperty 'Version'
+                $Version | Should -Not -BeNullOrEmpty -Because "NuGet package ""${Package}"" should exist"
             }
             $result | Should -Exist
             $result | Should -Be (Join-Path -Path $script:testRoot -ChildPath "packages\$($Package).$($Version)")
@@ -418,15 +419,15 @@ Describe 'Install-WhiskeyTool' {
             $attr.Version = '0.2.0'
             $attr.SkipImport = $true
             WhenInstallingTool -FromAttribute $attr
-            $assertMockParams = @{
+            $installPSModule = @{
                 'CommandName' = 'Install-WhiskeyPowerShellModule';
                 'ModuleName' = 'Whiskey';
             }
-            Should -Invoke @assertMockParams -ParameterFilter { $Name -eq 'Zip' }
-            Should -Invoke @assertMockParams -ParameterFilter { $Version -eq '0.2.0' }
-            Should -Invoke @assertMockParams -ParameterFilter { $BuildRoot -eq $script:testRoot }
-            Should -Invoke @assertMockParams -ParameterFilter { $SkipImport -eq $true }
-            Should -Invoke @assertMockParams -ParameterFilter { $PesterBoundParameters['ErrorAction'] -eq 'Stop' }
+            Should -Invoke @installPSModule -ParameterFilter { $Name -eq 'Zip' }
+            Should -Invoke @installPSModule -ParameterFilter { $Version -eq '0.2.0' }
+            Should -Invoke @installPSModule -ParameterFilter { $PSModulesParentDirPath -eq $script:testRoot }
+            Should -Invoke @installPSModule -ParameterFilter { $SkipImport -eq $true }
+            Should -Invoke @installPSModule -ParameterFilter { $PesterBoundParameters['ErrorAction'] -eq 'Stop' }
             $script:taskParameter['ZipModuleInfo'] | Should -Be 'PSModulePath'
         }
 
@@ -436,15 +437,15 @@ Describe 'Install-WhiskeyTool' {
             $attr.Version = '0.2.0'
             $attr.SkipImport = $true
             WhenInstallingTool -FromAttribute $attr
-            $assertMockParams = @{
+            $installPSModule = @{
                 'CommandName' = 'Install-WhiskeyPowerShellModule';
                 'ModuleName' = 'Whiskey';
             }
-            Should -Invoke @assertMockParams -ParameterFilter { $Name -eq 'Zip' }
-            Should -Invoke @assertMockParams -ParameterFilter { $Version -eq '0.2.0' }
-            Should -Invoke @assertMockParams -ParameterFilter { $BuildRoot -eq $script:testRoot }
-            Should -Invoke @assertMockParams -ParameterFilter { $SkipImport -eq $true }
-            Should -Invoke @assertMockParams -ParameterFilter { $PesterBoundParameters['ErrorAction'] -eq 'Stop' }
+            Should -Invoke @installPSModule -ParameterFilter { $Name -eq 'Zip' }
+            Should -Invoke @installPSModule -ParameterFilter { $Version -eq '0.2.0' }
+            Should -Invoke @installPSModule -ParameterFilter { $PSModulesParentDirPath -eq $script:testRoot }
+            Should -Invoke @installPSModule -ParameterFilter { $SkipImport -eq $true }
+            Should -Invoke @installPSModule -ParameterFilter { $PesterBoundParameters['ErrorAction'] -eq 'Stop' }
             $script:taskParameter.Values | Should -Not -BeOfType ([Management.Automation.PSModuleInfo])
         }
 
@@ -459,7 +460,7 @@ Describe 'Install-WhiskeyTool' {
             }
             Should -Invoke @installWhiskeyPSModule -ParameterFilter { $Name -eq 'ProGetAutomation' }
             Should -Invoke @installWhiskeyPSModule -ParameterFilter { $Version -eq '3.3.0-*' }
-            Should -Invoke @installWhiskeyPSModule -ParameterFilter { $BuildRoot -eq $script:testRoot }
+            Should -Invoke @installWhiskeyPSModule -ParameterFilter { $PSModulesParentDirPath -eq $script:testRoot }
             Should -Invoke @installWhiskeyPSModule -ParameterFilter { $AllowPrerelease.IsPresent }
             Should -Invoke @installWhiskeyPSModule -ParameterFilter { $PesterBoundParameters['ErrorAction'] -eq 'Stop' }
         }

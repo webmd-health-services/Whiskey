@@ -22,16 +22,18 @@ function Uninstall-WhiskeyPowerShellModule
     param(
         [Parameter(Mandatory)]
         # The name of the module to uninstall.
-        [String]$Name,
+        [String] $Name,
 
-        [String]$Version = '*.*.*',
+        [String] $Version = '*.*.*',
 
         [Parameter(Mandatory)]
-        # Modules are saved into a PSModules directory. This is the path where the PSModules directory was created and should be the same path passed to `Install-WhiskeyPowerShellModule`.
-        [String]$BuildRoot,
+        # Modules are saved into a PSModules directory. This is the path where the PSModules directory was created and
+        # should be the same path passed to `Install-WhiskeyPowerShellModule`.
+        [String] $PSModulesParentDirPath,
 
-        # The directory where the module is installed. If this parameter is provided, the BuildRoot parameter is ignored.
-        [String]$Path
+        # The directory where the module is installed. If this parameter is provided, the PSModulesParentDirPath
+        # parameter is ignored.
+        [String] $Path
     )
 
     Set-StrictMode -Version 'Latest'
@@ -39,7 +41,7 @@ function Uninstall-WhiskeyPowerShellModule
 
     Get-Module -Name $Name | Remove-Module -Force
 
-    $modulesRoot = Join-Path -Path $BuildRoot -ChildPath $script:psModulesDirectoryName
+    $modulesRoot = Join-Path -Path $PSModulesParentDirPath -ChildPath $script:psModulesDirectoryName
     if( $Path )
     {
         $modulesRoot = $Path

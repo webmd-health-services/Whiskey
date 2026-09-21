@@ -106,7 +106,7 @@ function Invoke-WhiskeyBuild
 
     $Context.StartBuild()
 
-    Register-WhiskeyPSModulePath -PSModulesRoot $Context.BuildRoot
+    Register-WhiskeyPSModulePath -PSModulesParentDirPath $Context.BuildRoot
 
     Set-WhiskeyBuildStatus -Context $Context -Status Started
 
@@ -166,7 +166,7 @@ function Invoke-WhiskeyBuild
         }
         Set-WhiskeyBuildStatus -Context $Context -Status $status
 
-        Unregister-WhiskeyPSModulePath -PSModulesRoot $Context.BuildRoot
+        Unregister-WhiskeyPSModulePath -PSModulesParentDirPath $Context.BuildRoot
 
         $context.StopBuild()
 

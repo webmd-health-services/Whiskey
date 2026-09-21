@@ -48,10 +48,27 @@ function New-WhiskeyProGetUniversalPackage
     }
 
     $name = $TaskParameter['Name']
+    $groupSeparatorIdx = $name.LastIndexOf('/')
+    if ($groupSeparatorIdx -ge 0)
+    {
+        if ($manifestProperties.ContainsKey('group'))
+        {
+            $msg = "Properties Name and ManifestProperties/Group: group included in both the Name, ""${name}"", and " +
+                   "in ManifestProperties, ""$($manifestProperties['group'])"". Using the value from the Name " +
+                   'property. Remove group from either the Name or ManifestProperties properties.'
+            Write-WhiskeyWarning -Context $TaskContext -Message $msg
+        }
+
+        $manifestProperties['group'] = $name.Substring(0, $groupSeparatorIdx)
+        $name = $name.Substring($groupSeparatorIdx + 1)
+    }
+
     $validNameRegex = '^[0-9A-z\-\._]{1,50}$'
     if ($name -notmatch $validNameRegex)
     {
-        Stop-WhiskeyTask -TaskContext $TaskContext -Message '"Name" property is invalid. It should be a string of one to fifty characters: numbers (0-9), upper and lower-case letters (A-z), dashes (-), periods (.), and underscores (_).'
+        $msg = '"Name" property is invalid. It should be a string of one to fifty characters: numbers (0-9), upper ' +
+               'and lower-case letters (A-z), dashes (-), periods (.), and underscores (_).'
+        Stop-WhiskeyTask -TaskContext $TaskContext -Message $msg
         return
     }
 
@@ -398,7 +415,7 @@ function New-WhiskeyProGetUniversalPackage
 
     if( -not $manifestProperties.ContainsKey('title') )
     {
-        $manifestProperties['title'] = $TaskParameter['Name']
+        $manifestProperties['title'] = $name
     }
 
     $outFileDisplay = $outFile -replace ('^{0}' -f [regex]::Escape($TaskContext.BuildRoot)),''
@@ -406,7 +423,7 @@ function New-WhiskeyProGetUniversalPackage
     Write-WhiskeyInfo -Context $TaskContext -Message ('Creating universal package "{0}".' -f $outFileDisplay)
     New-ProGetUniversalPackage -OutFile $outFile `
                                -Version $packageVersion `
-                               -Name $TaskParameter['Name'] `
+                               -Name $name `
                                -Description $TaskParameter['Description'] `
                                -AdditionalMetadata $manifestProperties
 

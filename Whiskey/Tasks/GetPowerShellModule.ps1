@@ -29,19 +29,19 @@ function Get-WhiskeyPowerShellModule
 
     if( $TaskContext.ShouldClean )
     {
-        Uninstall-WhiskeyPowerShellModule -Name $Name -BuildRoot $TaskContext.BuildRoot -Path $Path
+        Uninstall-WhiskeyPowerShellModule -Name $Name -PSModulesParentDirPath $TaskContext.BuildRoot -Path $Path
         return
     }
 
     if( -not $Path )
     {
-        $Path = Get-WhiskeyPSModulePath -PSModulesRoot $TaskContext.BuildRoot -Create
+        $Path = Get-WhiskeyPSModulePath -PSModulesParentDirPath $TaskContext.BuildRoot -Create
         $Path = $Path | Resolve-Path -Relative
     }
 
     $module = Find-WhiskeyPowerShellModule -Name $Name `
                                            -Version $Version `
-                                           -BuildRoot $TaskContext.BuildRoot `
+                                           -PSModulesParentDirPath $TaskContext.BuildRoot `
                                            -AllowPrerelease:$AllowPrerelease `
                                            -ErrorAction Stop
     if( -not $module )
@@ -55,7 +55,7 @@ function Get-WhiskeyPowerShellModule
     Write-WhiskeyInfo -Context $TaskContext -Message ('Installing PowerShell module {0} {1} to {2}.' -f $Name,$module.Version,$Path)
     $moduleRoot = Install-WhiskeyPowerShellModule -Name $Name `
                                                   -Version $module.Version `
-                                                  -BuildRoot $TaskContext.BuildRoot `
+                                                  -PSModulesParentDirPath $TaskContext.BuildRoot `
                                                   -SkipImport:(-not $Import) `
                                                   -AllowPrerelease:$AllowPrerelease `
                                                   -Path $fullPath `

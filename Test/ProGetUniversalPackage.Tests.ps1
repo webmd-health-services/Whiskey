@@ -1101,6 +1101,17 @@ Build:
         ThenTaskFails '"Name"\ property\ is invalid'
     }
 
+    It 'allows group in package name' {
+        GivenBuildVersion '4.5.6-rc.2+build.400'
+        GivenARepositoryWithItems 'my.file'
+        WhenPackaging -WithPackageName 'my-group/my-sub-group/package-name' -Path 'my.file'
+        ThenUpackMetadataIs @{
+            'name' = 'package-name'
+            'title' = 'package-name'
+            'group' = 'my-group/my-sub-group'
+        }
+    }
+
     It 'adds manifest properties to package''s upackJson file' {
         GivenBuildVersion '1.2.3-rc.1+build.300'
         GivenARepositoryWithItems 'my.file'

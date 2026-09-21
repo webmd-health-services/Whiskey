@@ -283,6 +283,9 @@ function Set-WhiskeyVersion
                 {
                     if( -not $NuGetPackageID )
                     {
+                        # New SDK-style projects use the .csproj file name as the package ID, if not in the .csproj.
+                        $NuGetPackageID = $Path | Split-Path -Leaf
+                        $NuGetPackageID = [IO.Path]::GetFileNameWithoutExtension($NuGetPackageID)
                         $node = $csprojXml.SelectSingleNode('/Project/PropertyGroup/PackageId')
                         if( $node )
                         {

@@ -23,7 +23,7 @@ function GivenAnInstalledPowerShellModule
     {
         New-Item -Path $moduleRoot -ItemType 'Directory' -Force
     }
-    New-ModuleManifest -Path (Join-Path -Path $moduleRoot -ChildPath ('{0}.psd1' -f $WithName)) -ModuleVersion $WithVersion | 
+    New-ModuleManifest -Path (Join-Path -Path $moduleRoot -ChildPath ('{0}.psd1' -f $WithName)) -ModuleVersion $WithVersion |
         Out-Null
 
     # Import the module so we can test later that it gets removed before getting deleted.
@@ -47,10 +47,10 @@ function WhenUninstallingPowerShellModule
 
     $Global:Error.Clear()
 
-    $Global:Parameter = @{ 
+    $Global:Parameter = @{
         'Name' = $WithName;
         'Version' = $WithVersion;
-        'BuildRoot' = $testRoot;
+        'PSModulesParentDirPath' = $testRoot;
     }
 
     if( $PSBoundParameters.ContainsKey('ErrorAction') )
@@ -88,9 +88,9 @@ function ThenRemovedPSModulesDirectory
 Describe 'Uninstall-WhiskeyPowerShellModule.when given a PowerShell Module' {
     It 'should uninstall it' {
         Init
-        GivenAnInstalledPowerShellModule 
+        GivenAnInstalledPowerShellModule
         WhenUninstallingPowerShellModule
-        ThenPowerShellModuleUninstalled 
+        ThenPowerShellModuleUninstalled
     }
 }
 

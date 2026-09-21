@@ -48,9 +48,11 @@ BeforeAll {
         )
 
         $parameter = $PSBoundParameters
-        $parameter['BuildRoot'] = $script:testDirPath
+        $parameter['PSModulesParentDirPath'] = $script:testDirPath
 
-        Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyPowerShellModule' -Parameter $PSBoundParameters -ErrorAction $ErrorActionPreference
+        Invoke-WhiskeyPrivateCommand -Name 'Install-WhiskeyPowerShellModule' `
+                                     -Parameter $PSBoundParameters `
+                                     -ErrorAction $ErrorActionPreference
     }
 
     function Get-SemVer

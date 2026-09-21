@@ -38,7 +38,7 @@ function Find-WhiskeyPowerShellModule
 
         [Parameter(Mandatory)]
         # The path to the directory where the PSModules directory should be created.
-        [String]$BuildRoot,
+        [String]$PSModulesParentDirPath,
 
         # Allow prerelease versions.
         [switch]$AllowPrerelease
@@ -119,7 +119,7 @@ function Find-WhiskeyPowerShellModule
                    '"Install-Module -Name ''PowerShellGet'' -Force -AllowClobber"'
             Write-WhiskeyWarning -Message $msg
         }
-        Register-WhiskeyPSModulePath -PSModulesRoot $BuildRoot
+        Register-WhiskeyPSModulePath -PSModulesParentDirPath $PSModulesParentDirPath
 
         $allowPrereleaseArg = Get-AllowPrereleaseArg -CommandName 'Find-Module' -AllowPrerelease:$AllowPrerelease
 

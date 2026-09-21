@@ -28,13 +28,13 @@ function Get-WhiskeyPSModule
     Find-WhiskeyPSModule
 
     .EXAMPLE
-    Get-WhiskeyPSModule -Name Pester -PSModulesRoot $Context.BuildRoot
+    Get-WhiskeyPSModule -Name Pester -PSModulesParentDirPath $Context.BuildRoot
 
     Demonstrates how to call `Get-WhiskeyPSModule` to get module information. In this case, the function will return the
     latest version of the `Pester` module, and will include the PSModules path in the build directory.
 
     .EXAMPLE
-    Get-WhiskeyPSModule -Name Pester -PSModulesRoot $Context.BuildRoot -Version '4.*'
+    Get-WhiskeyPSModule -Name Pester -PSModulesParentDirPath $Context.BuildRoot -Version '4.*'
 
     Demonstrates how to call `Get-WhiskeyPSModule` to get module information for a specific version of a module. In this
     example, the function will return the latest 4.x version of the `Pester` module, and will include the PSModules path
@@ -43,12 +43,12 @@ function Get-WhiskeyPSModule
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [String]$Name,
+        [String] $Name,
 
-        [String]$Version,
+        [String] $Version,
 
         [Parameter(Mandatory)]
-        $PSModulesRoot,
+        [String] $PSModulesParentDirPath,
 
         [switch] $AllowPrerelease
     )
@@ -58,7 +58,7 @@ function Get-WhiskeyPSModule
 
     Write-WhiskeyDebug '\Get-WhiskeyPSModule\' -Indent
 
-    Register-WhiskeyPSModulePath -PSModulesRoot $PSModulesRoot
+    Register-WhiskeyPSModulePath -PSModulesParentDirPath $PSModulesParentDirPath
 
     try
     {
