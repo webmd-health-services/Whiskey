@@ -151,7 +151,7 @@ function Install-WhiskeyPowerShellModule
 
         try
         {
-            $installedModule = Get-WhiskeyPSModule -PSModulesRoot $PSModulesParentDirPath `
+            $installedModule = Get-WhiskeyPSModule -PSModulesParentDirPath $PSModulesParentDirPath `
                                                    -Name $Name `
                                                    -Version $Version `
                                                    -AllowPrerelease:$AllowPrerelease
@@ -221,7 +221,7 @@ function Install-WhiskeyPowerShellModule
             {
                 $Global:ProgressPreference = $globalProgressPref
             }
-            $installedModule = Get-WhiskeyPSModule -PSModulesRoot $PSModulesParentDirPath `
+            $installedModule = Get-WhiskeyPSModule -PSModulesParentDirPath $PSModulesParentDirPath `
                                                    -Name $moduleToInstall.Name `
                                                    -Version $moduleToInstall.Version `
                                                    -AllowPrerelease:$AllowPrerelease
