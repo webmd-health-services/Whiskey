@@ -4,9 +4,9 @@ function Get-WhiskeyPSModulePath
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)]
-        [String]$PSModulesRoot,
+        [String] $PSModulesParentDirPath,
 
-        [switch]$Create
+        [switch] $Create
     )
 
     Set-StrictMode -Version 'Latest'
@@ -16,7 +16,7 @@ function Get-WhiskeyPSModulePath
 
     try
     {
-        $path = Join-Path -Path $PSModulesRoot -ChildPath 'PSModules' | Write-Output
+        $path = Join-Path -Path $PSModulesParentDirPath -ChildPath $script:psModulesDirectoryName
 
         if( $Create -and -not (Test-Path -Path $path) )
         {

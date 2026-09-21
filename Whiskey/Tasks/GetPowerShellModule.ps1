@@ -35,7 +35,7 @@ function Get-WhiskeyPowerShellModule
 
     if( -not $Path )
     {
-        $Path = Get-WhiskeyPSModulePath -PSModulesRoot $TaskContext.BuildRoot -Create
+        $Path = Get-WhiskeyPSModulePath -PSModulesParentDirPath $TaskContext.BuildRoot -Create
         $Path = $Path | Resolve-Path -Relative
     }
 

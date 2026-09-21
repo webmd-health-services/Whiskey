@@ -131,7 +131,7 @@ function Install-WhiskeyPowerShellModule
         }
         else
         {
-            $installRoot = Get-WhiskeyPSModulePath -PSModulesRoot $BuildRoot -Create
+            $installRoot = Get-WhiskeyPSModulePath -PSModulesParentDirPath $BuildRoot -Create
         }
         Write-WhiskeyDebug "Module $($Name) $($Version) will be installed to ""$($installRoot)""."
 

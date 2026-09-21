@@ -12,10 +12,10 @@ function Unregister-WhiskeyPSModulePath
 
     Set-StrictMode -Version 'Latest'
     Use-CallerPreference -Cmdlet $PSCmdlet -SessionState $ExecutionContext.SessionState
-    
+
     if( $PSCmdlet.ParameterSetName -eq 'FromWhiskey' )
     {
-        $Path = Get-WhiskeyPSModulePath -PSModulesRoot $PSModulesRoot
+        $Path = Get-WhiskeyPSModulePath -PSModulesParentDirPath $PSModulesRoot
     }
 
     $pathBefore = $env:PSModulePath -split [IO.Path]::PathSeparator
