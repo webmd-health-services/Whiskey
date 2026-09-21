@@ -58,7 +58,7 @@ function Get-WhiskeyPSModule
 
     Write-WhiskeyDebug '\Get-WhiskeyPSModule\' -Indent
 
-    Register-WhiskeyPSModulePath -PSModulesRoot $PSModulesRoot
+    Register-WhiskeyPSModulePath -PSModulesParentDirPath $PSModulesRoot
 
     try
     {

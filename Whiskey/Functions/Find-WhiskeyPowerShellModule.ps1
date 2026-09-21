@@ -119,7 +119,7 @@ function Find-WhiskeyPowerShellModule
                    '"Install-Module -Name ''PowerShellGet'' -Force -AllowClobber"'
             Write-WhiskeyWarning -Message $msg
         }
-        Register-WhiskeyPSModulePath -PSModulesRoot $PSModulesParentDirPath
+        Register-WhiskeyPSModulePath -PSModulesParentDirPath $PSModulesParentDirPath
 
         $allowPrereleaseArg = Get-AllowPrereleaseArg -CommandName 'Find-Module' -AllowPrerelease:$AllowPrerelease
 
