@@ -127,7 +127,7 @@ function WhenResolvingPowerShellModule
 
     $parameter = @{
         'Name' = $moduleName;
-        'BuildRoot' = $testRoot;
+        'PSModulesParentDirPath' = $testRoot;
     }
 
     if( $moduleVersion )

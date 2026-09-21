@@ -41,7 +41,7 @@ function Get-WhiskeyPowerShellModule
 
     $module = Find-WhiskeyPowerShellModule -Name $Name `
                                            -Version $Version `
-                                           -BuildRoot $TaskContext.BuildRoot `
+                                           -PSModulesParentDirPath $TaskContext.BuildRoot `
                                            -AllowPrerelease:$AllowPrerelease `
                                            -ErrorAction Stop
     if( -not $module )

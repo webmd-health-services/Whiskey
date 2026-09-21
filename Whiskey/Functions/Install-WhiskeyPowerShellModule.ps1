@@ -98,7 +98,7 @@ function Install-WhiskeyPowerShellModule
     {
         $findParameters = @{
             'Name' = $Name;
-            'BuildRoot' = $BuildRoot;
+            'PSModulesParentDirPath' = $BuildRoot;
             'AllowPrerelease' = $AllowPrerelease;
             'Version' = $Version;
         }
