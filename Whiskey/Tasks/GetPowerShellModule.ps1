@@ -29,7 +29,7 @@ function Get-WhiskeyPowerShellModule
 
     if( $TaskContext.ShouldClean )
     {
-        Uninstall-WhiskeyPowerShellModule -Name $Name -BuildRoot $TaskContext.BuildRoot -Path $Path
+        Uninstall-WhiskeyPowerShellModule -Name $Name -PSModulesParentDirPath $TaskContext.BuildRoot -Path $Path
         return
     }
 
